@@ -65,7 +65,7 @@ void ConstructLattice()
 
 
 /*main*/
-int main()
+int main() //
 {
     /*parameter*/
     latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
