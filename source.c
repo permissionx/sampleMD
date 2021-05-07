@@ -65,24 +65,6 @@ void ConstructLattice()
 
 
 /*main*/
-
-//1.2
-//int main()
-//{
-//    /*parameter*/
-//    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
-//    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
-//    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
-//
-//    priTranVecs[0][0] = 1; priTranVecs[1][0] = 0; priTranVecs[2][0] = 0;
-//    priTranVecs[0][1] = 0; priTranVecs[1][1] = 1; priTranVecs[2][1] = 0;
-//    priTranVecs[0][2] = 0; priTranVecs[1][2] = 0; priTranVecs[2][2] = 1;
-//
-//    /*process*/
-//    ConstructReducedLattice();
-//    ConstructLattice();
-//}
-
 //1.3
 int main()
 {
