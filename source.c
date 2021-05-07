@@ -65,7 +65,6 @@ void ConstructLattice()
 
 
 /*main*/
-//1.3
 int main()
 {
     /*parameter*/
