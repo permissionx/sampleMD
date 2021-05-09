@@ -17,6 +17,7 @@ struct Atom
     int id, type;
 };
 
+
 /*global variable declaration*/
 struct LatticePoint latticePoints[MAX_LATTICE_NUMBER];
 int latticePointNumber;
@@ -25,8 +26,8 @@ double priTranVecs[3][3]; // primitive translation vectors
 struct Atom atoms[MAX_ATOM_NUMBER];
 int atomNumber;
 int cellAtomNumber; 
-double cellAtomR[MAX_CELL_ATOM_NUMBER][3];
-int cellAtomType[MAX_CELL_ATOM_NUMBER];
+double cellAtomRs[MAX_CELL_ATOM_NUMBER][3];
+int cellAtomTypes[MAX_CELL_ATOM_NUMBER];
 
 
 /*function declaration*/
@@ -83,11 +84,11 @@ void ConstructCrystal()
     {
         for ( nCellAtom = 0; nCellAtom < cellAtomNumber; nCellAtom++)
         {
-            atoms[nAtom].r[0] = latticePoints[nLattice].r[0] + cellAtomR[nCellAtom][0];
-            atoms[nAtom].r[1] = latticePoints[nLattice].r[1] + cellAtomR[nCellAtom][1];
-            atoms[nAtom].r[2] = latticePoints[nLattice].r[2] + cellAtomR[nCellAtom][2];
+            atoms[nAtom].r[0] = latticePoints[nLattice].r[0] + cellAtomRs[nCellAtom][0];
+            atoms[nAtom].r[1] = latticePoints[nLattice].r[1] + cellAtomRs[nCellAtom][1];
+            atoms[nAtom].r[2] = latticePoints[nLattice].r[2] + cellAtomRs[nCellAtom][2];
 
-            atoms[nAtom].type = cellAtomType[nCellAtom];
+            atoms[nAtom].type = cellAtomTypes[nCellAtom];
             atoms[nAtom].id = nCellAtom+1;
             nAtom++;
         }
@@ -109,8 +110,8 @@ int main() //
     priTranVecs[0][2] = -0.5*latticeConstant; priTranVecs[1][2] = 0.5*latticeConstant; priTranVecs[2][2] = 0.5*latticeConstant;
     
     cellAtomNumber = 1; 
-    cellAtomR[0][0] = 0; cellAtomR[0][1] = 0; cellAtomR[0][2] = 0;
-    cellAtomType[0] = 1;
+    cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
+    cellAtomTypes[0] = 1;
 
 
     /*process*/
