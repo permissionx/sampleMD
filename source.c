@@ -47,9 +47,8 @@ void DumpSingle(char fileName[20]);
 double VecDotMul(double vec0[3], double vec1[3]); // vector dot multiplication
 void VecCroMul(double vec0[3], double vec1[3], double vecOut[3]); // vector cross multiplication
 void ComputeRecTranVecs(tranVecs[3][3], recTranVecs[3][3]);
-void ComputeReR(recTranVecs[3][3]);
 void MatInv(double matIn[3][3], double matOut[3][3]);    //Matrix Inversion
-void ComputeReR(recTranVecs_inv[3][3], boxStartPoint[3]);
+void ComputeReR(r[3], recTranVecs_inv[3][3], startPoint[3], reR[3])
 void ComputeRecTranVecs();
 void ComputeAtomBoxReR();
 
