@@ -31,6 +31,11 @@ void ComputeAtomBoxReR()
     }
 }
 
+void PBC_r(atom)
+{
+    
+}
+
 /*main*/
 int main() //
 {
