@@ -50,7 +50,7 @@ void ComputeRecTranVecs(tranVecs[3][3], recTranVecs[3][3]);
 void ComputeReR(recTranVecs[3][3]);
 void MatInv(double matIn[3][3], double matOut[3][3]);    //Matrix Inversion
 void ComputeReR(recTranVecs_inv[3][3], boxStartPoint[3]);
-void ComputeRecTranVecs();
+void ComputeBoxRecTranVecs();
 void ComputeAtomBoxReR();
 
 
@@ -183,7 +183,7 @@ void ComputeReR(r[3], recTranVecs_inv[3][3], startPoint[3], reR[3])
     Mul_3_1(recTranVecs_inv, relativeR, reR);
 }
 
-void ComputeRecTranVecs()
+void ComputeBoxRecTranVecs()
 {
     ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
     MatInv(boxRecTranVecs, boxRecTranVecs_inv);
@@ -192,7 +192,7 @@ void ComputeRecTranVecs()
 void ComputeAtomBoxReR()
 {
     int n;
-    for (n=0;n<atomNumber;n++)
+    for (n = 0; n < atomNumber; n++)
     {
         ComputeReR(atoms[n].r, boxRecTranVecs_inv, boxStartPoint, atoms[n].reR_box);
     }
@@ -220,9 +220,9 @@ int main() //
     cellAtomTypes[1] = 1;
 
     startPoint[0] = 0; startPoint[1] = 0; startPoint[2] = 0;
-    boxTranVecs[0][0] = latticeConstant*10; boxTranVecs[1][0] = 0; boxTranVecs[2][0] = 0;
-    boxTranVecs[0][1] = 0; boxTranVecs[1][1] = latticeConstant*10; boxTranVecs[2][1] = 0;
-    boxTranVecs[0][2] = 0; boxTranVecs[1][2] = 0; boxTranVecs[2][2] = latticeConstant*10;
+    boxTranVecs[0][0] = latticeConstant * 10; boxTranVecs[1][0] = 0; boxTranVecs[2][0] = 0;
+    boxTranVecs[0][1] = 0; boxTranVecs[1][1] = latticeConstant * 10; boxTranVecs[2][1] = 0;
+    boxTranVecs[0][2] = 0; boxTranVecs[1][2] = 0; boxTranVecs[2][2] = latticeConstant * 10;
 
 
 
@@ -233,7 +233,7 @@ int main() //
     ConstructCrystal();
     DumpSingle("W_BCC.xyz");
 
-    ComputeRecTranVecs();
+    ComputeBoxRecTranVecs();
     ComputeAtomBoxReR();
 
 }
