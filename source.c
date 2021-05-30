@@ -47,11 +47,14 @@ void DumpSingle(char fileName[20]);
 double VecDotMul(double vec0[3], double vec1[3]); // vector dot multiplication
 void VecCroMul(double vec0[3], double vec1[3], double vecOut[3]); // vector cross multiplication
 void ComputeRecTranVecs(tranVecs[3][3], recTranVecs[3][3]);
-void ComputeReR(recTranVecs[3][3]);
 void MatInv(double matIn[3][3], double matOut[3][3]);    //Matrix Inversion
 void ComputeReR(recTranVecs_inv[3][3], boxStartPoint[3]);
 void ComputeBoxRecTranVecs();
+void ComputeReR(r[3], recTranVecs_inv[3][3], startPoint[3], reR[3])
+void ComputeRecTranVecs();
 void ComputeAtomBoxReR();
+void PBC_r();
+void PBC_dr(struct Atom atom1, struct Atom atom2, double dr[3])
 
 
 /*function*/
@@ -197,6 +200,54 @@ void ComputeAtomBoxReR()
         ComputeReR(atoms[n].r, boxRecTranVecs_inv, boxStartPoint, atoms[n].reR_box);
     }
 }
+
+void PBC_r()
+{
+    int n,d;
+    int outFlag;
+
+    for (n=0;n<atomNumber;n++)
+    {        
+        outFlag = false;
+        for (d=0;d<3;d++)
+        {
+            if (atoms[n].reR[d]<0)
+            {
+                atoms[n].reR[d] += 1;
+                outFlag = true;
+            }
+            else if(atoms[n].reR[d]>=1)
+            {
+                atoms[n].reR[d] -= 1;
+                outFlag = true;
+            }
+        }
+        if (outFlag == true)
+        {
+            Mul_3_1(boxRecTranVecs, atoms[n].reR, atoms.R)
+        }
+    }
+}
+
+void PBC_dr(struct Atom atom1, struct Atom atom2, double dr[3])
+{
+    int d;
+    double reDr[3];
+    for (d=0; d<3; d++)
+    {
+        reDr[d] = atom1.reR[d] - atom2.reR[d]
+        if (reDr[d] < -0.5)
+        {
+            reDr[d] += 1;
+        }
+        else if(reDr[d] > 0.5)
+        {
+            reDr[d] -= 1;
+        }
+    }
+    Mul_3_1(boxRecTranVecs, reDr, dr)
+}
+
 
 
 
