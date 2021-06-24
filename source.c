@@ -502,7 +502,7 @@ void Interaction_EAM(int energyFlag, int forceFlag)
     double distance;
     double rho;
     double atomicEnergy;
-    double dr[3];
+    double dr_distance; // dr[d]/distance
     double forcePhiTmp[3], forceRhoTmp[3], forceRhoTmp_inner[3], forcePhiTmp_inner[3];
     int n;
     int d;
@@ -522,7 +522,6 @@ void Interaction_EAM(int energyFlag, int forceFlag)
         for (j = 0; j < atoms[i].neighborNumber; j++)
         {
             distance = atoms[i].neighborList[j].distance;
-            if (forceFlag) PBC_dr(i, j, dr);
             for (n = 0; n < n_rho_EAM; n++)
             {
                 if (distance < delta_rho_EAM[n])
@@ -551,31 +550,40 @@ void Interaction_EAM(int energyFlag, int forceFlag)
                     //phi component for force
                     for (n = 0; n < n_phi_EAM; n++)
                     {
-                        forcePhiTmp_inner[d] += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
+                        if (distance < delta_phi_EAM[n])
+                        {
+                            forcePhiTmp_inner[d] += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
+                        }
                     }
 
                     //rho component for force
                     for (n = 0; n < n_rho_EAM; n++)
                     {
-                        forceRhoTmp_inner[d] += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
+                        if (distance < delta_rho_EAM[n])
+                        {
+                            forceRhoTmp_inner[d] += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
+                        }
                     }
+                    dr_distance = atoms[i].neighborList[j].dr[d];
+                    forcePhiTmp[d] += dr_distance * forcePhiTmp_inner[d];
+                    forceRhoTmp[d] += dr_distance * forceRhoTmp_inner[d];
                 }
-                forcePhiTmp[d] += dr[d] / distance * forcePhiTmp_inner[d];
-                forceRhoTmp[d] += dr[d] / distance * forceRhoTmp_inner[d];
             }
         }
+
         if (energyFlag) //rho component for energy
         {
             atomicEnergy += a1_f_EAM * pow(rho, 0.5) + a2_f_EAM * pow(rho, 2);
             atoms[i].potentialEnergy = atomicEnergy;
             totalPotentialEnergy += atomicEnergy;
         }
+
         if (forceFlag)
         {
             for (d = 0; d < 3; d++)
             {
                 forceRhoTmp[d] *= a1_f_EAM * pow(rho, -0.5) + 4 * a2_f_EAM * rho;
-                atoms[i].force[d] -= (forcePhiTmp[d] + forceRhoTmp[d]);
+                atoms[i].force[d] = -(forcePhiTmp[d] + forceRhoTmp[d]);
             }
         }
     }
@@ -611,9 +619,9 @@ int main() //
 
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
 
-    boxTranVecs[0][0] = latticeConstant * 50; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
-    boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 50; boxTranVecs[2][1] = 0;
-    boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 50;
+    boxTranVecs[0][0] = latticeConstant * 10; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
+    boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 10; boxTranVecs[2][1] = 0;
+    boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 10;
 
 
     cutoff = 4 * latticeConstant + 0.1;
