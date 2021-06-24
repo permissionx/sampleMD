@@ -13,28 +13,28 @@ const  int n_phi_EAM = 15;
 const  int n_rho_EAM = 4;
 double a_phi_EAM[15] =
 {
-    0.960851701343041e2,
-    -0.184410923895214e3,
-    0.935784079613550e2,
-    -0.798358265041677e1,
-    0.747034092936229e1,
-    -0.152756043708453e1,
-    0.125205932634393e1,
-    0.163082162159425e1,
-    -0.141854775352260e1,
-    -0.819936046256149e0,
-    0.198013514305908e1,
-    -0.696430179520267e0,
-    0.304546909722160e-1,
-    -0.163131143161660e1,
-    0.138409896486177e1
+ 0.960851701343041e2,
+-0.184410923895214e3,
+ 0.935784079613550e2,
+-0.798358265041677e1,
+ 0.747034092936229e1,
+-0.152756043708453e1,
+ 0.125205932634393e1,
+ 0.163082162159425e1,
+-0.141854775352260e1,
+-0.819936046256149e0,
+ 0.198013514305908e1,
+-0.696430179520267e0,
+ 0.304546909722160e-1,
+-0.163131143161660e1,
+ 0.138409896486177e1
 };
 double a_rho_EAM[4] =
 {
-    -0.420429107805055e1,
-    0.518217702261442e0,
-    0.562720834534370e-1,
-    0.344164178842340e-1
+-0.420429107805055e1,
+0.518217702261442e0,
+0.562720834534370e-1,
+0.344164178842340e-1
 };
 
 const double a1_f_EAM = -5.946454472402710;
@@ -42,28 +42,28 @@ const double a2_f_EAM = -0.049477376935239;
 
 double delta_phi_EAM[15] =
 {
-    2.5648975000,
-    2.6297950000,
-    2.6946925000,
-    2.8663175000,
-    2.9730450000,
-    3.0797725000,
-    3.5164725000,
-    3.8464450000,
-    4.1764175000,
-    4.7008450000,
-    4.8953000000,
-    5.0897550000,
-    5.3429525000,
-    5.4016950000,
-    5.4604375000
+2.5648975000,
+2.6297950000,
+2.6946925000,
+2.8663175000,
+2.9730450000,
+3.0797725000,
+3.5164725000,
+3.8464450000,
+4.1764175000,
+4.7008450000,
+4.8953000000,
+5.0897550000,
+5.3429525000,
+5.4016950000,
+5.4604375000
 };
 double delta_rho_EAM[4] =
 {
-    2.500000000000000,
-    3.100000000000000,
-    3.500000000000000,
-    4.900000000000000
+ 2.500000000000000,
+ 3.100000000000000,
+ 3.500000000000000,
+ 4.900000000000000
 };
 
 /*class definition*/
@@ -105,7 +105,7 @@ double boxStartPoint[3];
 double boxTranVecs[3][3]; // box translation vectors
 double boxRecTranVecs[3][3]; //box reciprocal translation vectors
 double boxRecTranVecs_inv[3][3];
-int boxOrthogonalFlag;
+int BoxOrthogonal;
 
 double cutoff;
 double LJ_sigma;
@@ -141,7 +141,6 @@ void FindNeighbors();
 void InitLJ();
 void Force_LJ();
 void Energy_LJ();
-void Interaction_EAM(int energyFlag, int forceFlag);
 
 /*function*/
 void ConstructReducedLattice()
@@ -213,7 +212,7 @@ void DumpSingle(char fileName[20])
     fprintf(file, "id type x y z\n");
     for (i = 0; i < atomNumber; i++)
     {
-        fprintf(file, "%d %d %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2], atoms[i].force[0], atoms[i].force[1], atoms[i].force[2]);
+        fprintf(file, "%d %d %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2]);
     }
     fclose(file);
 }
@@ -288,7 +287,7 @@ void ComputeAtomBoxReR()
 
 void PBC_r()
 {
-    if (boxOrthogonalFlag)
+    if (BoxOrthogonal)
     {
         PBC_r_orthogonal();
     }
@@ -300,7 +299,7 @@ void PBC_r()
 
 void PBC_dr(int i, int j, double dr[3])
 {
-    if (boxOrthogonalFlag)
+    if (BoxOrthogonal)
     {
         PBC_dr_orthogonal(i, j, dr);
     }
@@ -496,88 +495,39 @@ void Force_LJ()
     }
 }
 
-void Interaction_EAM(int energyFlag, int forceFlag)
+void Energy_EAM()
 {
     int i, j;
     double distance;
     double rho;
     double atomicEnergy;
-    double dr[3];
-    double forcePhiTmp[3], forceRhoTmp[3], forceRhoTmp_inner[3], forcePhiTmp_inner[3];
     int n;
-    int d;
     for (i = 0; i < atomNumber; i++)
     {
         rho = 0.0;
-        if (energyFlag) atomicEnergy = 0;
-        if (forceFlag)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                forcePhiTmp[d] = 0;
-                forceRhoTmp[d] = 0;
-                atoms[i].force[d] = 0;
-            }
-        }
+        atomicEnergy = 0
         for (j = 0; j < atoms[i].neighborNumber; j++)
         {
             distance = atoms[i].neighborList[j].distance;
-            if (forceFlag) PBC_dr(i, j, dr);
+            for (n = 0; n < n_phi_EAM; n++)
+            {
+                if (distance < delta_phi_EAM[n])
+                {
+                    atomicEnergy += a_phi_EAM[n] * pow((delta_phi_EAM[n] - distance), 3);
+                }
+            }
+
             for (n = 0; n < n_rho_EAM; n++)
             {
                 if (distance < delta_rho_EAM[n])
                 {
-                    rho += a_rho_EAM[n] * pow((delta_rho_EAM[n] - distance), 3);
+                    rho += a_rho_EAM[n] * powe((delta_rho_EAM[n] - distance), 3);
                 }
             }
-
-            if (energyFlag) //phi component for energy
-            {
-                for (n = 0; n < n_phi_EAM; n++)
-                {
-                    if (distance < delta_phi_EAM[n])
-                    {
-                        atomicEnergy += 0.5 * a_phi_EAM[n] * pow((delta_phi_EAM[n] - distance), 3);
-                    }
-                }
-            }
-
-            if (forceFlag)
-            {
-                for (d = 0; d < 3; d++)
-                {
-                    forcePhiTmp_inner[d] = 0;
-                    forceRhoTmp_inner[d] = 0;
-                    //phi component for force
-                    for (n = 0; n < n_phi_EAM; n++)
-                    {
-                        forcePhiTmp_inner[d] += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
-                    }
-
-                    //rho component for force
-                    for (n = 0; n < n_rho_EAM; n++)
-                    {
-                        forceRhoTmp_inner[d] += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
-                    }
-                }
-                forcePhiTmp[d] += dr[d] / distance * forcePhiTmp_inner[d];
-                forceRhoTmp[d] += dr[d] / distance * forceRhoTmp_inner[d];
-            }
         }
-        if (energyFlag) //rho component for energy
-        {
-            atomicEnergy += a1_f_EAM * pow(rho, 0.5) + a2_f_EAM * pow(rho, 2);
-            atoms[i].potentialEnergy = atomicEnergy;
-            totalPotentialEnergy += atomicEnergy;
-        }
-        if (forceFlag)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                forceRhoTmp[d] *= a1_f_EAM * pow(rho, -0.5) + 4 * a2_f_EAM * rho;
-                atoms[i].force[d] -= (forcePhiTmp[d] + forceRhoTmp[d]);
-            }
-        }
+        atomicEnergy += a1_f_EAM * pow(rho, 0.5) + a2_f_EAM * pow(rho, 2);
+        atoms[i].potentialEnergy = atomicEnergy;
+        totalPotentialEnergy += atomicEnergy;
     }
 }
 
@@ -587,53 +537,54 @@ void Interaction_EAM(int energyFlag, int forceFlag)
 int main() //
 {
     double latticeConstant; //unit: Angstrom
-    latticeConstant = 3.14;
-    /*parameter*/
-    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
-    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
-    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
-
-    priTranVecs[0][0] = latticeConstant; priTranVecs[1][0] = 0; priTranVecs[2][0] = 0;
-    priTranVecs[0][1] = 0; priTranVecs[1][1] = latticeConstant; priTranVecs[2][1] = 0;
-    priTranVecs[0][2] = 0; priTranVecs[1][2] = 0; priTranVecs[2][2] = latticeConstant;
-    boxOrthogonalFlag = 1;
-
-    cellAtomNumber = 2;
-    cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
-    cellAtomRs[1][0] = 0.5 * latticeConstant; cellAtomRs[1][1] = 0.5 * latticeConstant; cellAtomRs[1][2] = 0.5 * latticeConstant;
-    cellAtomRs[2][0] = 0.5 * latticeConstant; cellAtomRs[2][1] = 0; cellAtomRs[2][2] = 0.5 * latticeConstant;
-    cellAtomRs[3][0] = 0.5 * latticeConstant; cellAtomRs[3][1] = 0.5 * latticeConstant; cellAtomRs[3][2] = 0;
-
-    cellAtomTypes[0] = 1;
-    cellAtomTypes[1] = 1;
-    cellAtomTypes[2] = 1;
-    cellAtomTypes[3] = 1;
-
-    boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
-
-    boxTranVecs[0][0] = latticeConstant * 50; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
-    boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 50; boxTranVecs[2][1] = 0;
-    boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 50;
-
-
-    cutoff = 4 * latticeConstant + 0.1;
-
-
-    /*process*/
-    ConstructReducedLattice();
-    ConstructLattice();
-    ConstructCrystal();
-
-    if (!boxOrthogonalFlag)
+    for (latticeConstant = 3.0; latticeConstant < 3.1; latticeConstant += 0.01)
     {
-        ComputeBoxRecTranVecs();
-        ComputeAtomBoxReR();
+        /*parameter*/
+        latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
+        latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
+        latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
+
+        priTranVecs[0][0] = latticeConstant; priTranVecs[1][0] = 0; priTranVecs[2][0] = 0;
+        priTranVecs[0][1] = 0; priTranVecs[1][1] = latticeConstant; priTranVecs[2][1] = 0;
+        priTranVecs[0][2] = 0; priTranVecs[1][2] = 0; priTranVecs[2][2] = latticeConstant;
+        BoxOrthogonal = 1;
+
+        cellAtomNumber = 4;
+        cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
+        cellAtomRs[1][0] = 0; cellAtomRs[1][1] = 0.5 * latticeConstant; cellAtomRs[1][2] = 0.5 * latticeConstant;
+        cellAtomRs[2][0] = 0.5 * latticeConstant; cellAtomRs[2][1] = 0; cellAtomRs[2][2] = 0.5 * latticeConstant;
+        cellAtomRs[3][0] = 0.5 * latticeConstant; cellAtomRs[3][1] = 0.5 * latticeConstant; cellAtomRs[3][2] = 0;
+
+        cellAtomTypes[0] = 1;
+        cellAtomTypes[1] = 1;
+        cellAtomTypes[2] = 1;
+        cellAtomTypes[3] = 1;
+
+        boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
+
+        boxTranVecs[0][0] = latticeConstant * 10; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
+        boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 10; boxTranVecs[2][1] = 0;
+        boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 10;
+
+        LJ_epsilon = 0.0031;
+        LJ_sigma = 2.74;
+        cutoff = 4 * latticeConstant + 0.1;
+
+
+        /*process*/
+        ConstructReducedLattice();
+        ConstructLattice();
+        ConstructCrystal();
+
+        if (!BoxOrthogonal)
+        {
+            ComputeBoxRecTranVecs();
+            ComputeAtomBoxReR();
+        }
+
+        InitLJ();
+        FindNeighbors();
+        Energy_LJ();
+        printf("%f\n", totalPotentialEnergy);
     }
-
-
-    FindNeighbors();
-    Interaction_EAM(1, 1);
-    DumpSingle("force.xyz");
-    printf("%f\n", totalPotentialEnergy);
-
 }
