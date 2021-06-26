@@ -8,7 +8,7 @@
 #define MAX_CELL_ATOM_NUMBER 10
 #define MAX_NEIGHBOR_NUMBER 2000
 
-
+//EAM parameters
 const  int n_phi_EAM = 15;
 const  int n_rho_EAM = 4;
 double a_phi_EAM[15] =
@@ -88,6 +88,7 @@ struct Atom
     double force[3];
     int neighborNumber;
     struct Neighbor neighborList[MAX_NEIGHBOR_NUMBER]; // error if exceed
+    double minDirection[3];
 };
 
 
@@ -98,6 +99,7 @@ int latticeSizes[3][2];
 double priTranVecs[3][3]; // primitive translation vectors
 struct Atom atoms[MAX_ATOM_NUMBER];
 int atomNumber;
+int maxID;
 int cellAtomNumber;
 double cellAtomRs[MAX_CELL_ATOM_NUMBER][3];
 int cellAtomTypes[MAX_CELL_ATOM_NUMBER];
@@ -107,6 +109,8 @@ double boxRecTranVecs[3][3]; //box reciprocal translation vectors
 double boxRecTranVecs_inv[3][3];
 int boxOrthogonalFlag;
 
+char interactionName[20];
+
 double cutoff;
 double LJ_sigma;
 double LJ_epsilon;
@@ -114,6 +118,8 @@ double LJ_24_epsilon_sigma6;
 double LJ_2_sigma6;
 double LJ_4_epsilon;
 double totalPotentialEnergy;
+
+char minimizeStyle[20];
 
 
 /*function declaration*/
@@ -137,11 +143,17 @@ void PBC_dr_nonorthogonal(int i, int j, double dr[3]);
 void PBC_r_orthogonal();
 void PBC_dr_orthogonal(int i, int j, double dr[3]);
 
+void DeleteAtomByIndex(int index);
+void DeleteAtomsByRegion(double block[3][2]);
+
 void FindNeighbors();
 void InitLJ();
-void Force_LJ();
-void Energy_LJ();
+void Interaction_LJ(int energyFlag, int forceFlag);
 void Interaction_EAM(int energyFlag, int forceFlag);
+
+void Minimize(double energyCriterion);
+void MinimizeSD(double energyCriterion);
+void LineMinimize();
 
 /*function*/
 void ConstructReducedLattice()
@@ -189,7 +201,7 @@ void ConstructCrystal()
 
     for (nLattice = 0; nLattice < latticePointNumber; nLattice++)
     {
-        for ( nCellAtom = 0; nCellAtom < cellAtomNumber; nCellAtom++)
+        for (nCellAtom = 0; nCellAtom < cellAtomNumber; nCellAtom++)
         {
             atoms[nAtom].r[0] = latticePoints[nLattice].r[0] + cellAtomRs[nCellAtom][0];
             atoms[nAtom].r[1] = latticePoints[nLattice].r[1] + cellAtomRs[nCellAtom][1];
@@ -200,6 +212,7 @@ void ConstructCrystal()
             nAtom++;
         }
     }
+    maxID = nAtom - 1;
     atomNumber = nAtom;
 }
 
@@ -396,6 +409,54 @@ void PBC_dr_orthogonal(int i, int j, double dr[3])
     }
 }
 
+void DeleteAtomByIndex(int index)
+{
+    int i;
+    for (i = index; i < atomNumber; i++)
+    {
+        atoms[i] = atoms[i + 1];
+    }
+    atomNumber--;
+}
+
+void DeleteAtomsByRegion(double block[3][2])
+{
+    int i, d;
+    int dFlag[3];
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            if (atoms[i].r[d] > block[d][0] && atoms[i].r[d] < block[d][1])
+            {
+                dFlag[d] = 1;
+            }
+            else
+            {
+                dFlag[d] = 0;
+            }
+        }
+        if (dFlag[0] && dFlag[1] && dFlag[2])
+        {
+            DeleteAtomByIndex(i);
+            i--;
+        }
+    }
+}
+
+void CreateAtom(double r[3], int type)
+{
+    int i, d;
+    for (d = 0; d < 3; d++)
+    {
+        atoms[atomNumber].r[d] = r[d];
+    }
+    atoms[atomNumber].type = type;
+    maxID++;
+    atoms[atomNumber].id = maxID;
+    atomNumber++;
+}
+
 void FindNeighbors()
 {
     int i, j;
@@ -440,57 +501,42 @@ void InitLJ()
     LJ_2_sigma6 = 2 * pow(LJ_sigma, 6);
 }
 
-
-
-void Energy_LJ()
-{
-    int i, j;
-    double energy;
-    double distance;
-
-    for (i = 0; i < atomNumber; i++)
-    {
-        atoms[i].potentialEnergy = 0;
-    }
-    for (i = 0; i < atomNumber; i++)
-    {
-        for (j = 0; j < atoms[i].neighborNumber; j++)
-        {
-            distance = atoms[i].neighborList[j].distance;
-            energy = LJ_4_epsilon * (pow((LJ_sigma / distance), 12.) - pow((LJ_sigma / distance), 6.));
-            atoms[i].potentialEnergy += energy / 2;
-        }
-    }
-
-    totalPotentialEnergy = 0;
-    for (i = 0; i < atomNumber; i++)
-    {
-        totalPotentialEnergy += atoms[i].potentialEnergy;
-    }
-}
-
-void Force_LJ()
+void Interaction_LJ(int energyFlag, int forceFlag)
 {
     int i, j, d;
-    double dr[3];
-    double distance, distance8, distance14;
+    double distance, distance8, distance14, dr[3];
+    double energy;
     double force_temp;
 
+    if (energyFlag) totalPotentialEnergy = 0;
     for (i = 0; i < atomNumber; i++)
     {
-        atoms[i].force[0] = 0;
-        atoms[i].force[1] = 0;
-        atoms[i].force[2] = 0;
+        if (energyFlag) atoms[i].potentialEnergy = 0;
+        if (forceFlag)
+        {
+            atoms[i].force[0] = 0;
+            atoms[i].force[1] = 0;
+            atoms[i].force[2] = 0;
+        }
         for (j = 0; j < atoms[i].neighborNumber; j++)
         {
             distance = atoms[i].neighborList[j].distance;
-            distance14 = pow(distance, 14);
-            distance8 = pow(distance, 8);
-            for (d = 0; d < 3; d++)
+            if (energyFlag)
             {
-                dr[d] = atoms[i].neighborList[j].dr[d];
-                force_temp = LJ_24_epsilon_sigma6 * (LJ_2_sigma6 * dr[d] / distance14 - dr[d] / distance8);
-                atoms[i].force[d] += force_temp;
+                energy = LJ_4_epsilon * (pow((LJ_sigma / distance), 12.) - pow((LJ_sigma / distance), 6.));
+                atoms[i].potentialEnergy += energy / 2;
+                totalPotentialEnergy += energy / 2;
+            }
+            if (forceFlag)
+            {
+                distance14 = pow(distance, 14);
+                distance8 = pow(distance, 8);
+                for (d = 0; d < 3; d++)
+                {
+                    dr[d] = atoms[i].neighborList[j].dr[d];
+                    force_temp = LJ_24_epsilon_sigma6 * (LJ_2_sigma6 * dr[d] / distance14 - dr[d] / distance8);
+                    atoms[i].force[d] += force_temp;
+                }
             }
         }
     }
@@ -506,6 +552,7 @@ void Interaction_EAM(int energyFlag, int forceFlag)
     double forcePhiTmp[3], forceRhoTmp[3], forceRhoTmp_inner[3], forcePhiTmp_inner[3];
     int n;
     int d;
+    if (energyFlag) totalPotentialEnergy = 0;
     for (i = 0; i < atomNumber; i++)
     {
         rho = 0.0;
@@ -529,8 +576,8 @@ void Interaction_EAM(int energyFlag, int forceFlag)
                     rho += a_rho_EAM[n] * pow((delta_rho_EAM[n] - distance), 3);
                 }
             }
-
-            if (energyFlag) //phi component for energy
+            //phi component for energy
+            if (energyFlag)
             {
                 for (n = 0; n < n_phi_EAM; n++)
                 {
@@ -571,13 +618,15 @@ void Interaction_EAM(int energyFlag, int forceFlag)
             }
         }
 
-        if (energyFlag) //rho component for energy
+        //rho component for energy and total energy
+        if (energyFlag)
         {
             atomicEnergy += a1_f_EAM * pow(rho, 0.5) + a2_f_EAM * pow(rho, 2);
             atoms[i].potentialEnergy = atomicEnergy;
             totalPotentialEnergy += atomicEnergy;
         }
 
+        // total force
         if (forceFlag)
         {
             for (d = 0; d < 3; d++)
@@ -589,17 +638,59 @@ void Interaction_EAM(int energyFlag, int forceFlag)
     }
 }
 
+void Interaction(int energyFlag, int forceFlag)
+{
+    if (interactionName == "LJ") Interaction_LJ(energyFlag, forceFlag);
+    else if (interactionName == "EAM") Interaction_EAM(energyFlag, forceFlag);
+    else printf("Potential not found.\n");
+}
 
+void minimizeSD(double energyCriterion)
+{
+    int i, d;
+    double deltaEnergy, lastEnergy;
+
+    FindNeighbors();
+    Interaction(0, 1);
+    do
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
+        }
+        deltaEnergy = LineMinimize();
+    } while (deltaEnergy < energyCriterion);
+}
+
+void LineMinimize()
+{
+    int i,d;
+    double startEnergy, endEnergy;
+    double lambda;
+    lambda = 100;
+    Interaction(1, 0);
+    startEnergy = totalPotentialEnergy;
+    do
+    {
+        for(i=0;i<atomNumber;i++)
+        {
+            for (d=0;d<3;d++)
+            {
+                atoms[i].r[d] += atoms[i].minDirection[d]*lambda;
+            }
+        }
+    }
+}
 
 /*main*/
 int main() //
 {
     double latticeConstant; //unit: Angstrom
     latticeConstant = 3.14;
-    /*parameter*/
-    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
-    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
-    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
+    //parameter
+    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 0;
+    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 0;
+    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 0;
 
     priTranVecs[0][0] = latticeConstant; priTranVecs[1][0] = 0; priTranVecs[2][0] = 0;
     priTranVecs[0][1] = 0; priTranVecs[1][1] = latticeConstant; priTranVecs[2][1] = 0;
@@ -627,7 +718,7 @@ int main() //
     cutoff = 4 * latticeConstant + 0.1;
 
 
-    /*process*/
+    //process
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
@@ -638,9 +729,21 @@ int main() //
         ComputeAtomBoxReR();
     }
 
-
+    //double block[3][2] = {{ -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1}};
+    //DeleteAtomsByRegion(block);
+    double r1[3] = { 0,0,0 };
+    double r2[3] = { 1,1,1 };
+    CreateAtom(r1, 1);
+    CreateAtom(r2, 1);
     FindNeighbors();
     Interaction_EAM(1, 1);
+    /*
+    LJ_epsilon = 0.0031;
+    LJ_sigma = 2.74;
+    cutoff = 4 * latticeConstant + 0.1;
+    InitLJ();
+    Interaction_LJ(1, 1);
+    */
     DumpSingle("force.xyz");
     printf("%f\n", totalPotentialEnergy);
 
