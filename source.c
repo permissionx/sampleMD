@@ -1,6 +1,7 @@
 /*include*/
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 /*constant*/
 #define MAX_LATTICE_NUMBER 2000
@@ -92,6 +93,7 @@ struct Atom
     struct Neighbor neighborList[MAX_NEIGHBOR_NUMBER]; // error if exceed
     double minDirection[3];
     double lineMinStartR[3];
+    double lastForce_CG[3];
 };
 
 
@@ -112,8 +114,7 @@ double boxRecTranVecs[3][3]; //box reciprocal translation vectors
 double boxRecTranVecs_inv[3][3];
 int boxOrthogonalFlag;
 
-char PotentialName[20];
-
+char potentialName[20];
 double cutoff;
 double LJ_sigma;
 double LJ_epsilon;
@@ -123,6 +124,10 @@ double LJ_4_epsilon;
 double totalPotentialEnergy;
 
 char minimizeStyle[20];
+double energyCriterion_min;
+double lambda_min;
+double c_min;
+double rho_min;
 
 /*function declaration*/
 void ConstructReducedLattice();
@@ -153,9 +158,10 @@ void InitLJ();
 void Potential_LJ(int energyFlag, int forceFlag);
 void Potential_EAM(int energyFlag, int forceFlag);
 
-void Minimize(double energyCriterion);
-void MinimizeSD(double energyCriterion);
-void LineMinimize();
+void Minimize();
+void Minimize_SD();
+void Minimize_CG();
+double LineMinimize();
 
 /*function*/
 void ConstructReducedLattice()
@@ -210,7 +216,7 @@ void ConstructCrystal()
             atoms[nAtom].r[2] = latticePoints[nLattice].r[2] + cellAtomRs[nCellAtom][2];
 
             atoms[nAtom].type = cellAtomTypes[nCellAtom];
-            atoms[nAtom].id = nAtom;
+            atoms[nAtom].id = nAtom-1;
             nAtom++;
         }
     }
@@ -633,8 +639,8 @@ void Potential_EAM(int energyFlag, int forceFlag)
                 {
 
                     atoms[i].force[d] += ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                                            + (0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM))
-                                           * forceRhoTmp) + forcePhiTmp) * atoms[i].neighborList[j].dr[d] / distance;
+                        + (0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM))
+                        * forceRhoTmp) + forcePhiTmp) * atoms[i].neighborList[j].dr[d] / distance;
                 }
             }
         }
@@ -644,35 +650,44 @@ void Potential_EAM(int energyFlag, int forceFlag)
 
 void Potential(int energyFlag, int forceFlag)
 {
-    if (PotentialName == "LJ") Potential_LJ(energyFlag, forceFlag);
-    else if (PotentialName == "EAM") Potential_EAM(energyFlag, forceFlag);
+    if (strcmp(potentialName, "LJ") == 0) Potential_LJ(energyFlag, forceFlag);
+    else if (strcmp(potentialName, "EAM") == 0) Potential_EAM(energyFlag, forceFlag);
     else printf("Potential not found.\n");
 }
 
-void minimizeSD(double energyCriterion)
+void Minimize_SD()
 {
     int i, d;
-    double deltaEnergy, lastEnergy;
+    double deltaEnergy;
 
+    PBC_r();
     FindNeighbors();
-    Potential(1, 1);
     do
     {
+        Potential(0, 1);
         for (i = 0; i < atomNumber; i++)
         {
             for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
         }
         deltaEnergy = LineMinimize();
-    } while (deltaEnergy < energyCriterion);
+        printf("%f\n", deltaEnergy);
+    } while (deltaEnergy > energyCriterion_min);
 }
 
 
-double LineMinimize(double lambda; double c; double rho;)
+
+double LineMinimize()
 {
-    int i,d;
-    double startEnergy, tryEnergy;
+    int i, d;
+    double startEnergy, acceptableEnergy;
+    double lambda;
+
+    PBC_r();
+    FindNeighbors();
+    Potential(1, 0);
     startEnergy = totalPotentialEnergy;
-    tryEnergy = startEnergy;
+    lambda = lambda_min;
+
     for (i = 0; i < atomNumber; i++)
     {
         for (d = 0; d < 3; d++)
@@ -683,19 +698,28 @@ double LineMinimize(double lambda; double c; double rho;)
 
     do
     {
+        acceptableEnergy = startEnergy;
         for (i = 0; i < atomNumber; i++)
         {
             for (d = 0; d < 3; d++)
             {
                 atoms[i].r[d] = atoms[i].lineMinStartR[d] + atoms[i].minDirection[d] * lambda;
-                tryEnergy -= atoms[i].minDirection[d] * atoms[i].minDirection[d] * lambda * c;
+                acceptableEnergy -= atoms[i].minDirection[d] * atoms[i].minDirection[d] * lambda * c_min;
             }
         }
+        PBC_r();
         FindNeighbors();
         Potential(1, 0);
-        lambda *= rho;
-    } while (tryEnergy >= totalPotentialEnergy);
+        lambda *= rho_min;
+    } while (acceptableEnergy <= totalPotentialEnergy);
     return startEnergy - totalPotentialEnergy;
+}
+
+void Minimize()
+{
+    if (strcmp(minimizeStyle, "SD") == 0) Minimize_SD();
+    //else if (minimizeStyle == "CG") Minimize_CG();
+    else printf("Minimize style not found.\n");
 }
 
 /*main*/
@@ -703,7 +727,7 @@ int main() //
 {
     double latticeConstant; //unit: Angstrom
     latticeConstant = 3.14;
-    //parameter
+    //box and atoms
     latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
     latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
     latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
@@ -716,13 +740,9 @@ int main() //
     cellAtomNumber = 2;
     cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
     cellAtomRs[1][0] = 0.5 * latticeConstant; cellAtomRs[1][1] = 0.5 * latticeConstant; cellAtomRs[1][2] = 0.5 * latticeConstant;
-    cellAtomRs[2][0] = 0.5 * latticeConstant; cellAtomRs[2][1] = 0; cellAtomRs[2][2] = 0.5 * latticeConstant;
-    cellAtomRs[3][0] = 0.5 * latticeConstant; cellAtomRs[3][1] = 0.5 * latticeConstant; cellAtomRs[3][2] = 0;
 
     cellAtomTypes[0] = 1;
     cellAtomTypes[1] = 1;
-    cellAtomTypes[2] = 1;
-    cellAtomTypes[3] = 1;
 
 
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
@@ -735,20 +755,31 @@ int main() //
     cutoff = 4 * latticeConstant + 0.1;
 
 
-    //process
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-
+    double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
+    DeleteAtomsByRegion(block);
     if (!boxOrthogonalFlag)
     {
         ComputeBoxRecTranVecs();
         ComputeAtomBoxReR();
     }
 
-    double block[3][2] = {{ -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1}};
-    DeleteAtomsByRegion(block);
-    Potential_EAM(1, 1);
+    //process
+    strcpy(potentialName, "EAM");
+
+    FindNeighbors();
+    Potential(1, 1);
+    printf("%f\n", totalPotentialEnergy);
+
+    strcpy(minimizeStyle, "SD");
+    energyCriterion_min = 0.0001;
+    lambda_min = 1;
+    c_min = 0.1;
+    rho_min = 0.5;
+    Minimize();
+
     /*
     double r0[3] = {0,0,0};
     double r1[3] = {0,0,3};
@@ -762,7 +793,8 @@ int main() //
     InitLJ();
     Potential_LJ(1, 1);
     */
-    DumpSingle("force.xyz");
+    char dumpName[20] = "force.xyz";
+    DumpSingle(dumpName);
     printf("%f\n", totalPotentialEnergy);
 
 }
