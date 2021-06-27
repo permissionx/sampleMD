@@ -9,19 +9,19 @@
 #define PI 3.1415926
 #define k_B 8.6173324e-5
 #define MAX_TEMP_NODES 20
-  
+
 
 
 
 struct LatPntT  // lattice point type，晶格格点类型
 {
-    double r[3], reR[3];  //格点的空间坐标和约化坐标
-    int id;  //格点id
+	double r[3], reR[3];  //格点的空间坐标和约化坐标
+	int id;  //格点id
 };
 
 struct AtomT
 {
-	double r[3], reR[3], supCellReR[3], force[3], lastForce[3], minDirection[3], lastMinDirection[3], velocity[3], ft[3],dr[3];
+	double r[3], reR[3], supCellReR[3], force[3], lastForce[3], minDirection[3], lastMinDirection[3], velocity[3], ft[3], dr[3];
 	double backtrackingStartR[3];
 	double energy;
 	double mass;
@@ -55,12 +55,12 @@ double cutoff[MAX_TYPE_NUMBER][MAX_TYPE_NUMBER];
 int iterTime;
 double pressure; //into local 
 double pressureAndvolume;
-double volume=1.0;
+double volume = 1.0;
 const double R_const = 8.31;
 const double NA = 6.02214076e23;
 
 int ReLat();
-int MatMul(double a[3],double b[3][3],double c[3]);
+int MatMul(double a[3], double b[3][3], double c[3]);
 int Lat();
 int Crystal();
 int Output(char filename[20], int timeStep);
@@ -75,9 +75,9 @@ int CRcpVec_supCell();
 int CR_supCell();
 int PBC_r();
 int PBC_dr(double dr[3], int index1, int index2);
-int CreateAtom(double block[3],int type); // type to ttype
+int CreateAtom(double block[3], int type); // type to ttype
 int DeleteAtoms(double block[3][2]);
-int EnergyAndForce_2Body(int ifEnergy,int ifForce);
+int EnergyAndForce_2Body(int ifEnergy, int ifForce);
 double Energy_LJ(double distance, double epsilon, double sigma);
 int Force_LJ(double force[3], double dr[3], double distance, double epsilon, double sigma);
 int Minimize_SD(double energyCrit, double alpha0, double rho, double c, char filename[20], int outSteps);
@@ -213,16 +213,16 @@ int ReLat()                                            //reduced lattice
 {
 	int n, i, j, k;
 	n = 0;
-	for (i = 0;i<latSize[0];i++)
+	for (i = 0; i < latSize[0]; i++)
 	{
-		for (j = 0;j<latSize[1];j++)
+		for (j = 0; j < latSize[1]; j++)
 		{
-			for (k = 0;k<latSize[2];k++)
+			for (k = 0; k < latSize[2]; k++)
 			{
 				latPnt[n].reR[0] = i;
 				latPnt[n].reR[1] = j;
 				latPnt[n].reR[2] = k;
-				latPnt[n].id = n+1;
+				latPnt[n].id = n + 1;
 				n++;
 			}
 		}
@@ -230,10 +230,10 @@ int ReLat()                                            //reduced lattice
 	nLatPnt = n;
 	return 0;
 }
-int MatMul(double p[3],double a[3][3],double b[3])
+int MatMul(double p[3], double a[3][3], double b[3])
 {
 	int i;
-	for (i = 0;i < 3;i++)
+	for (i = 0; i < 3; i++)
 		p[i] = a[0][i] * b[0] + a[1][i] * b[1] + a[2][i] * b[2];
 	return 0;
 }
@@ -241,25 +241,25 @@ int Lat()
 {
 	int n;
 	ReLat();
-	for (n = 0;n < nLatPnt;n++)
+	for (n = 0; n < nLatPnt; n++)
 		MatMul(latPnt[n].r, tranVec, latPnt[n].reR);
 	return 0;
 }
 int Crystal()
 {
-	int	n, na, i,j;
-    na = 0;
+	int	n, na, i, j;
+	na = 0;
 
 	Lat();
-		for (n = 0;n < nLatPnt;n++)
-		for (i = 0;i < cellAtomN;i++)
+	for (n = 0; n < nLatPnt; n++)
+		for (i = 0; i < cellAtomN; i++)
 		{
 			for (j = 0; j < 3; j++)
 			{
 				atom[na].r[j] = latPnt[n].r[j] + cellAtomR[i][j];
 			}
 			atom[na].ttype = cellAtomT[i];
-			atom[na].id = na+1;
+			atom[na].id = na + 1;
 			atom[na].mass = typeMass[atom[na].ttype];
 			na++;
 		}
@@ -274,24 +274,24 @@ void InitOut(char filename[20])
 	fclose(p);
 }
 
-int Output(char filename[20],int timeStep)
+int Output(char filename[20], int timeStep)
 {
 	int n;
 	FILE *p;
 	p = fopen(filename, "a");
 	fprintf(p, "ITEM: TIMESTEP\n");
-	fprintf(p, "%d\n",timeStep);
+	fprintf(p, "%d\n", timeStep);
 	fprintf(p, "ITEM: NUMBER OF ATOMS\n");
 	fprintf(p, "%d\n", nAtom);
 	fprintf(p, "ITEM: BOX BOUNDS pp pp pp\n");
 	fprintf(p, "0\t%f\n", latSize[0] * lattice_constant); // where lc comes from
 	fprintf(p, "0\t%f\n", latSize[1] * lattice_constant);
 	fprintf(p, "0\t%f\n", latSize[2] * lattice_constant);
-	fprintf(p, "ITEM: ATOMS id type x y z f1 \n");
-	for (n = 0;n < nAtom;n++)
+	fprintf(p, "ITEM: ATOMS id type x y z force_x force_y force_z\n");
+	for (n = 0; n < nAtom; n++)
 	{
-		fprintf(p, "%d %d %f %f %f %f \n", atom[n].id, atom[n].ttype,atom[n].r[0], atom[n].r[1], atom[n].r[2], fabs(atom[n].force[0])+fabs( atom[n].force[1])+fabs( atom[n].force[2]));
-		
+		fprintf(p, "%d %d %f %f %f %f %f %f %f\n", atom[n].id, atom[n].ttype, atom[n].r[0], atom[n].r[1], atom[n].r[2], atom[n].force[0], atom[n].force[1], atom[n].force[2], atom[n].energy);
+
 	}
 	fclose(p);
 	return 0;
@@ -319,7 +319,7 @@ int CRcpVec()											//compute reciprocal lattice vectors
 			k -= 3;
 		}
 		CroPro(rcpVec[i], tranVec[j], tranVec[k]);
-		for (d = 0; d < 3; d++) 
+		for (d = 0; d < 3; d++)
 		{
 			rcpVec[i][d] *= 2 * PI / cellVol[0];
 		}
@@ -340,14 +340,14 @@ int DotPro(double valueOut[1], double vecIn1[3], double vecIn2[3])		//dot produc
 }
 int CReR()													//compute reR
 {
-	int n,d;
+	int n, d;
 	double rcpVec_inv[3][3];				//rcperted lattice vector matrix of inversion		
 
 	CRcpVec();
 	MatInv(rcpVec_inv, rcpVec);
-	for (n = 0; n < nAtom; n++) 
+	for (n = 0; n < nAtom; n++)
 	{
-		MatMul(atom[n].reR, rcpVec_inv, atom[n].r);					
+		MatMul(atom[n].reR, rcpVec_inv, atom[n].r);
 		for (d = 0; d < 3; d++)
 		{
 			atom[n].reR[d] /= 2 * PI;
@@ -370,15 +370,15 @@ int MatInv(double out[3][3], double in[3][3])							//Matrix Inversion
 
 int CVec_supCell()
 {
-	int i,d;
-	for(i=0; i<3; i++)
+	int i, d;
+	for (i = 0; i < 3; i++)
 	{
-		for(d = 0; d < 3; d++)
+		for (d = 0; d < 3; d++)
 		{
 			supCellVec[i][d] = latSize[i] * tranVec[i][d];
 		}
 	}
-    return 0;
+	return 0;
 }
 int CRcpVec_supCell()						//compute rcpiprical lattice vectors
 {
@@ -386,7 +386,7 @@ int CRcpVec_supCell()						//compute rcpiprical lattice vectors
 	double cellVol[1];
 	double tempVec[3];						//temporary vector
 
-    CVec_supCell();
+	CVec_supCell();
 	CroPro(tempVec, supCellVec[0], supCellVec[1]);
 	DotPro(cellVol, tempVec, supCellVec[2]);
 
@@ -421,7 +421,7 @@ int CReR_supCell()						//compute reR
 int CR_supCell()								// compute R of atoms by supercell vector
 {
 	int n;
-	
+
 	for (n = 0; n < nAtom; n++)
 	{
 		MatMul(atom[n].r, supCellVec, atom[n].supCellReR);
@@ -430,12 +430,12 @@ int CR_supCell()								// compute R of atoms by supercell vector
 }
 int PBC_r()						//Periodic boundary condition Positions 
 {
-	int n,d;
+	int n, d;
 	int CReR_supCell();
 	int CR_supCell();
 
 	CReR_supCell();
-	for (n = 0; n < nAtom; n++ )
+	for (n = 0; n < nAtom; n++)
 	{
 		for (d = 0; d < 3; d++)
 		{
@@ -451,8 +451,8 @@ int PBC_r()						//Periodic boundary condition Positions
 	}
 	CR_supCell();
 	return 0;
-}	
-int PBC_dr(double dr[3],int index1,int index2)			//距离矢量2->1
+}
+int PBC_dr(double dr[3], int index1, int index2)			//距离矢量2->1
 {
 	int d;
 	double reDr[3];
@@ -476,14 +476,14 @@ int PBC_dr(double dr[3],int index1,int index2)			//距离矢量2->1
 	return 0;
 }
 
-int CreateAtom(double block[3],int type)
+int CreateAtom(double block[3], int type)
 {
-	atom[nAtom ].r[0] = block[0];
-	atom[nAtom ].r[1] = block[1];
-	atom[nAtom ].r[2] = block[2];
-	atom[nAtom ].mass = typeMass[type];
-	atom[nAtom ].ttype = cellAtomT[type];
-	atom[nAtom ].id = nAtom + 1;
+	atom[nAtom].r[0] = block[0];
+	atom[nAtom].r[1] = block[1];
+	atom[nAtom].r[2] = block[2];
+	atom[nAtom].mass = typeMass[type];
+	atom[nAtom].ttype = cellAtomT[type];
+	atom[nAtom].id = nAtom + 1;
 	nAtom++;
 	return 0;
 }
@@ -505,7 +505,7 @@ int DeleteAtoms(double block[3][2])
 		//改了索引范围
 		if (flag[0] && flag[1] && flag[2])
 		{
-			for (i = n; i < nAtom-1; i++)
+			for (i = n; i < nAtom - 1; i++)
 			{
 				atom[i] = atom[i + 1];
 			}
@@ -517,7 +517,7 @@ int DeleteAtoms(double block[3][2])
 }
 int RandomDisplace()
 {
-	int n,j;
+	int n, j;
 
 	for (n = 0; n < nAtom; n++)
 	{
@@ -563,14 +563,14 @@ int EnergyAndForce_2Body(int ifEnergy, int ifForce)
 			if (distance <= cutoff[atom[i].ttype][atom[j].ttype])
 			{
 
-					if (ifEnergy == 1)
-					{
-						energy = Energy_LJ(distance, epsilons[atom[i].ttype][atom[j].ttype], sigmas[atom[i].ttype][atom[j].ttype]);
-					}
-					if (ifForce == 1)
-					{
-						Force_LJ(force, dr, distance, epsilons[atom[i].ttype][atom[j].ttype], sigmas[atom[i].ttype][atom[j].ttype]);
-					}
+				if (ifEnergy == 1)
+				{
+					energy = Energy_LJ(distance, epsilons[atom[i].ttype][atom[j].ttype], sigmas[atom[i].ttype][atom[j].ttype]);
+				}
+				if (ifForce == 1)
+				{
+					Force_LJ(force, dr, distance, epsilons[atom[i].ttype][atom[j].ttype], sigmas[atom[i].ttype][atom[j].ttype]);
+				}
 
 				if (ifEnergy == 1)
 				{
@@ -594,10 +594,10 @@ int EnergyAndForce_2Body(int ifEnergy, int ifForce)
 }
 double Energy_LJ(double distance, double epsilon, double sigma)
 {
-    double  energy;
+	double  energy;
 
-    energy = 4.*epsilon*(pow((sigma/distance),12.) - pow((sigma/distance),6.));
-    return energy;
+	energy = 4.*epsilon*(pow((sigma / distance), 12.) - pow((sigma / distance), 6.));
+	return energy;
 }
 int Force_LJ(double force[3], double dr[3], double distance, double epsilon, double sigma)
 {
@@ -630,7 +630,7 @@ double EnergyAndForce_EAM()
 				double r = sqrt(pow(dr[0], 2) + pow(dr[1], 2) + pow(dr[2], 2));
 				for (int t = 0; t != EAM_n_phi; t++)
 					if (EAM_parameter_delta_phi[t] >= r)
-						energy += EAM_parameter_a_phi[t] * pow(EAM_parameter_delta_phi[t] - r, 3)/2.;
+						energy += EAM_parameter_a_phi[t] * pow(EAM_parameter_delta_phi[t] - r, 3) / 2.;
 				for (int t = 0; t != EAM_n_rho; t++)
 				{
 					if (r < 2.002970124727)
@@ -670,10 +670,10 @@ double EnergyAndForce_EAM()
 }
 double EnergyAndForce_EAM_Cu(double cutoff)
 {
-	static const double F0 = 3.54 - 1.30, F1=1.0241,alpha = 0.3902,beta =6.0641,ra=2.3051,Xb=3.00,re=2.3051;
+	static const double F0 = 3.54 - 1.30, F1 = 1.0241, alpha = 0.3902, beta = 6.0641, ra = 2.3051, Xb = 3.00, re = 2.3051;
 	double A1, A2, B1;
-	double energy = 0.0,rou=0.0, rou_e =6.05;
-		//rou_e = 0.015;
+	double energy = 0.0, rou = 0.0, rou_e = 6.05;
+	//rou_e = 0.015;
 	double dr[3];
 	PBC_r();
 	//two-body potential
@@ -840,7 +840,7 @@ int Minimize_CG(double energyCrit, double alpha0, double rho, double c, char fil
 
 	printf("%d %30.25f\n", iterTime, potentialEnergy);
 	sprintf(filenameStep, "min/%d.%s", iterTime, filename);
-	Output(filenameStep,1);
+	Output(filenameStep, 1);
 
 	return 0;
 }
@@ -971,7 +971,7 @@ double LineSearch_Backtracking(double alpha0, double rho, double c, char filenam
 		{
 			printf("%d %30.25f\n", iterTime, potentialEnergy);
 			sprintf(filenameStep, "min/%d.%s", iterTime, filename);
-			Output(filename, filenameStep);
+			Output(filename, 1);
 		}
 		iterTime++;
 
@@ -985,6 +985,7 @@ double LineSearch_Backtracking(double alpha0, double rho, double c, char filenam
 
 	return potentialEnergy;
 }
+
 double LineSearch_Backtracking_EAM(double alpha0, double rho, double c, char filename[20], int outSteps)
 {
 	double startEnergy, endEnergy;
@@ -1041,29 +1042,29 @@ double LineSearch_Backtracking_EAM(double alpha0, double rho, double c, char fil
 
 double Gaussrand(double V, double E) // 方差V,期望E
 {
- static double V1, V2, S;
- static int phase = 0;
- double X;
- 
- 
- if (phase == 0) {
-  do {
-   double U1 = (double)rand() / RAND_MAX;
-   double U2 = (double)rand() / RAND_MAX;
+	static double V1, V2, S;
+	static int phase = 0;
+	double X;
 
-   V1 = 2 * U1 - 1;
-   V2 = 2 * U2 - 1;
-   S = V1 * V1 + V2 * V2;
-  } while (S >= 1 || S == 0);
 
-  X = V1 * sqrt(-2 * log(S) / S);
- }
- else
-  X = V2 * sqrt(-2 * log(S) / S);
+	if (phase == 0) {
+		do {
+			double U1 = (double)rand() / RAND_MAX;
+			double U2 = (double)rand() / RAND_MAX;
 
- phase = 1 - phase;
+			V1 = 2 * U1 - 1;
+			V2 = 2 * U2 - 1;
+			S = V1 * V1 + V2 * V2;
+		} while (S >= 1 || S == 0);
 
- return X * sqrt(V) + E;
+		X = V1 * sqrt(-2 * log(S) / S);
+	}
+	else
+		X = V2 * sqrt(-2 * log(S) / S);
+
+	phase = 1 - phase;
+
+	return X * sqrt(V) + E;
 }
 void InitVelocity(double T)
 {
@@ -1094,7 +1095,7 @@ void InitVelocity(double T)
 		i += 1;
 	}
 }
-void Dynamic(double total_time, double dt, int nplot, int nProb, int nControl, char filename[20],double tempratureNodes[MAX_TEMP_NODES], double temperatureTimeNodes[MAX_TEMP_NODES])
+void Dynamic(double total_time, double dt, int nplot, int nProb, int nControl, char filename[20], double tempratureNodes[MAX_TEMP_NODES], double temperatureTimeNodes[MAX_TEMP_NODES])
 {
 	//后续更新：检测nControl是否整除nProb
 	int timeStep = 0;
@@ -1147,15 +1148,15 @@ void ComputeVolume()
 void ControlTempeture(double temperature, double targetTempeture)
 {
 	double scaleFactor;
-	int i,d;
+	int i, d;
 	//printf("T:%f  %f \n", targetTempeture, temperature);
-	scaleFactor = sqrt((targetTempeture/temperature));
+	scaleFactor = sqrt((targetTempeture / temperature));
 	for (i = 0; i < nAtom; i++)
 	{
 		for (d = 0; d < 3; d++)
 		{
-			atom[i].velocity[d] = atom[i].velocity[d]*scaleFactor;
-		
+			atom[i].velocity[d] = atom[i].velocity[d] * scaleFactor;
+
 		}
 		//printf("@@@@@@@%f\n", atom[i].velocity[0]);
 	}
@@ -1164,15 +1165,15 @@ double GetTargetTempeture(double tempratureNodes[MAX_TEMP_NODES], double tempera
 {
 	double targetTempeture, temp_o, temp_i, timeInter, timeGone;
 	int i = 1;
-	
+
 	while (1)
 	{
 		if (temperatureTimeNodes[i] >= time)
 		{
 			temp_o = tempratureNodes[i];
-			temp_i = tempratureNodes[i-1];
-			timeInter = temperatureTimeNodes[i] - temperatureTimeNodes[i-1];
-			timeGone = time - temperatureTimeNodes[i-1];
+			temp_i = tempratureNodes[i - 1];
+			timeInter = temperatureTimeNodes[i] - temperatureTimeNodes[i - 1];
+			timeGone = time - temperatureTimeNodes[i - 1];
 			break;
 		}
 		i++;
@@ -1203,6 +1204,7 @@ int VelocityVerlet(double dt)
 			atom[i].velocity[d] += (atom[i].force[d] + atom[i].ft[d]) * dt / (2 * atom[i].mass);
 		}
 	}
+	return 0;
 }
 
 /*int main()
@@ -1241,7 +1243,7 @@ int VelocityVerlet(double dt)
 	}
 	return 0;
 }*/
-
+/*
 int main()
 {
 	double distance;
@@ -1274,6 +1276,7 @@ int main()
 	}
 	return 0;
 }
+*/
 /*
 int main()
 {
@@ -1332,7 +1335,7 @@ int main()
 	Vacancy[1][0] = 1.9 * lattice_constant; Vacancy[1][1] = 2.1 * lattice_constant;
 	Vacancy[2][0] = 1.9 * lattice_constant; Vacancy[2][1] = 2.1 * lattice_constant;
 	cutoff[0][0] = 10;
-	//Minimize 
+	//Minimize
 	double Backtracking_alpha0 =1;
 	double Backtracking_rho = 0.5;
 	double Backtracking_c = 0.001;
@@ -1361,64 +1364,67 @@ int main()
 	printf("%lf\n", endEnergy - (nAtom ) * initialEnergy / (1+nAtom));
 	return 0;
 }*/
-/*
+
 int main()
 {
 	double  Vacancy[3][2];
 	double initialEnergy, endEnergy;
-	lattice_constant = 3.615;
+	lattice_constant = 3.14;
 	tranVec[0][0] = lattice_constant; tranVec[1][0] = 0; tranVec[2][0] = 0;
 	tranVec[0][1] = 0; tranVec[1][1] = lattice_constant; tranVec[2][1] = 0;
 	tranVec[0][2] = 0; tranVec[1][2] = 0; tranVec[2][2] = lattice_constant;
 	latSize[0] = 5; latSize[1] = 5; latSize[2] = 5;
 
 
-	cellAtomN = 4;
+	cellAtomN = 2;
 	cellAtomR[0][0] = 0.0; cellAtomR[0][1] = 0.0;  cellAtomR[0][2] = 0.0;
-	cellAtomR[1][0] = lattice_constant / 2; cellAtomR[1][1] = lattice_constant / 2;  cellAtomR[1][2] = 0.0;
+	cellAtomR[1][0] = lattice_constant / 2; cellAtomR[1][1] = lattice_constant / 2;  cellAtomR[1][2] = lattice_constant / 2;
 	cellAtomR[2][0] = lattice_constant / 2; cellAtomR[2][1] = 0.0;  cellAtomR[2][2] = lattice_constant / 2;
 	cellAtomR[3][0] = 0.0; cellAtomR[3][1] = lattice_constant / 2;  cellAtomR[3][2] = lattice_constant / 2;
-	
+
 	cellAtomT[0] = 0;
 	cellAtomT[1] = 0;
 	cellAtomT[2] = 0;
 	cellAtomT[3] = 0;
 
-	Vacancy[0][0] = 1.9 * lattice_constant; Vacancy[0][1] = 2.1 * lattice_constant;
-	Vacancy[1][0] = 1.9 * lattice_constant; Vacancy[1][1] = 2.1 * lattice_constant;
-	Vacancy[2][0] = 1.9 * lattice_constant; Vacancy[2][1] = 2.1 * lattice_constant;
-	cutoff[0][0] = 10;
+	Vacancy[0][0] = -0.1 * lattice_constant; Vacancy[0][1] = 0.1 * lattice_constant;
+	Vacancy[1][0] =-0.1 * lattice_constant; Vacancy[1][1] = 0.1 * lattice_constant;
+	Vacancy[2][0] =-0.1 * lattice_constant; Vacancy[2][1] = 0.1 * lattice_constant;
+	//cutoff[0][0] = 10;
 	//Minimize 
 	double Backtracking_alpha0 = 0.01;
 	double Backtracking_rho = 0.5;
 	double Backtracking_c = 0.001;
 	double energyCrit = 1E-5;
 
-	char filename[20] = "vacancy.xyz";
+	char filename[20] = "V.xyz";
 	int outSteps = 1;
 	InitOut(filename);
-	double cutoff_cu = 1.65 * lattice_constant;
+	//double cutoff_cu = 1.65 * lattice_constant;
 	Crystal();
 	PBC_r();
 	//初始计算能量
-	initialEnergy = EnergyAndForce_EAM_Cu(cutoff_cu);
+	initialEnergy = EnergyAndForce_EAM();
 	printf("%f  %lf  %lf \n", lattice_constant, potentialEnergy, potentialEnergy / nAtom);
-	Output(filename, 1);
 	printf("%d", nAtom);
 	//删除原子后的能量
 	DeleteAtoms(Vacancy);
-	potentialEnergy = EnergyAndForce_EAM_Cu(cutoff_cu);
+	potentialEnergy = EnergyAndForce_EAM();
 	printf("%f  %lf  %lf \n", lattice_constant, potentialEnergy, potentialEnergy / nAtom);
 	printf("%d", nAtom);
+	//filename = "V.xyz"
 	Output(filename, 1);
+
+	/*
 	//驰豫后的能量
 	Minimize_SD_EAM(energyCrit, Backtracking_alpha0, Backtracking_rho, Backtracking_c, filename, outSteps);
 	endEnergy = EnergyAndForce_EAM_Cu(cutoff_cu);
 	printf("%f  %lf  %lf \n", lattice_constant, potentialEnergy, potentialEnergy / nAtom);
 	printf("%lf\n", endEnergy - (nAtom)*initialEnergy / (1 + nAtom));
+	*/
 	return 0;
 }
-*/
+
 /*int main()
 {
 	double  Create[3];
@@ -1441,7 +1447,7 @@ int main()
 	Create[1] = 1.8 * lattice_constant;
 	Create[2] = 1.8 * lattice_constant;
 
-	//Minimize 
+	//Minimize
 	double Backtracking_alpha0 = 0.01;
 	double Backtracking_rho = 0.5;
 	double Backtracking_c = 0.001;
@@ -1463,7 +1469,7 @@ int main()
 	printf("%f  %lf  %lf \n", lattice_constant, potentialEnergy, potentialEnergy / nAtom);
 	Output(filename, 1);
 	//增加SIA后的能量
-	atom[124].r[0] += 0.628; atom[124].r[1] += 0.628; atom[124].r[2] += 0.628; 
+	atom[124].r[0] += 0.628; atom[124].r[1] += 0.628; atom[124].r[2] += 0.628;
 	CreateAtom(Create, 0);
 	PBC_r();
 	Output(filename, 1);
@@ -1515,7 +1521,7 @@ int main()
 	Create[2] = 1.8 * lattice_constant;
 	typeMass[0] = 74.0;
 	cutoff[0][0] = 5.01*lattice_constant;
-	//Minimize 
+	//Minimize
 	double Backtracking_alpha0 = 0.001;
 	double Backtracking_rho = 0.5;
 	double Backtracking_c = 0.001;
@@ -1559,7 +1565,7 @@ int main()
 		double tempratureNodes[MAX_TEMP_NODES];
 		double temperatureTimeNodes[MAX_TEMP_NODES];
 		tempratureNodes[0] = 800; tempratureNodes[1] = 800;
-		temperatureTimeNodes[0] = 0; temperatureTimeNodes[1] = total_time; 
+		temperatureTimeNodes[0] = 0; temperatureTimeNodes[1] = total_time;
 		//构建V和SIA,输出构型
 		DeleteAtoms(Vacancy);
 		atom[124].r[0] += 0.628; atom[124].r[1] += 0.628; atom[124].r[2] += 0.628;
@@ -1571,7 +1577,7 @@ int main()
 		Minimize_SD_EAM(energyCrit, Backtracking_alpha0, Backtracking_rho, Backtracking_c, filename, outSteps);
 		//设定初始温度
 		InitVelocity(initTemperature);
-		//Dynamic relax 
+		//Dynamic relax
 		Dynamic(total_time, dt, nplot, nProb, nControl, filename, tempratureNodes, temperatureTimeNodes);
 		Minimize_SD_EAM(energyCrit, Backtracking_alpha0, Backtracking_rho, Backtracking_c, filename, outSteps);
 
