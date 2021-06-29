@@ -1400,7 +1400,7 @@ int main()
 	char filename[20] = "V.xyz";
 	int outSteps = 1;
 	InitOut(filename);
-	//double cutoff_cu = 1.65 * lattice_constant;
+	double cutoff_cu = 1.65 * lattice_constant;
 	Crystal();
 	PBC_r();
 	//初始计算能量

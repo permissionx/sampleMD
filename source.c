@@ -2,12 +2,19 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define K_B 8.61733326E-5
+#define PI 3.1415926
+#define EBASE 2.71828182846
 
 /*constant*/
 #define MAX_LATTICE_NUMBER 2000
 #define MAX_ATOM_NUMBER 20000
 #define MAX_CELL_ATOM_NUMBER 10
+#define MAX_TYPES 10
 #define MAX_NEIGHBOR_NUMBER 2000
+#define UNITMASS 0.0001040459571284739
 
 //EAM parameters
 const  int n_phi_EAM = 15;
@@ -111,6 +118,7 @@ int maxID;
 int cellAtomNumber;
 double cellAtomRs[MAX_CELL_ATOM_NUMBER][3];
 int cellAtomTypes[MAX_CELL_ATOM_NUMBER];
+double typeMasses[MAX_TYPES];
 double boxStartPoint[3];
 double boxTranVecs[3][3]; // box translation vectors
 double boxRecTranVecs[3][3]; //box reciprocal translation vectors
@@ -118,7 +126,7 @@ double boxRecTranVecs_inv[3][3];
 int boxOrthogonalFlag;
 
 char potentialName[20];
-double cutoff;
+double neighborCutoff;
 double LJ_sigma;
 double LJ_epsilon;
 double LJ_24_epsilon_sigma6;
@@ -132,17 +140,20 @@ double lambda_min;
 double c_min;
 double rho_min;
 
-
+char dynamicStyle[20];
+double totalTime;
 double timeStep;
 double time_2_Verlet;
 double time_d_2_Verlet;
+
+char dumpName[20];
 
 /*function declaration*/
 void ConstructReducedLattice();
 void Mul_3_1(double a[3][3], double b[3], double p[3]); // matrix multiplication 3x1
 void ConstructLattice();
 void ConstructCrystal();
-void DumpSingle(char fileName[20]);
+void Dump(int step);
 double VecDotMul(double vec1[3], double vec2[3]); // vector dot multiplication
 void VecCroMul(double vec1[3], double vec2[3], double vecOut[3]); // vector cross multiplication
 void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3]);
@@ -171,14 +182,21 @@ void Minimize_SD();
 void Minimize_CG();
 double LineMinimize();
 
-void AsignMass();
-void Dynamics();
-void IterStep();
-void LanuchStep();
-void IterStep_Euler();
-void IterStep_Verlet();
-void LanuchStep_Verlet();
+
+double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2);
+double Density(double v, double prefactor1, double prefactor2);
 void DistributeVelocity(double temperature);
+void RandomSpherePoint(double r, double v[3]);
+void ZeroMomentum();
+
+void Dynamics();
+void IterRun();
+void LaunchRun();
+void IterRun_Euler();
+void IterRun_Verlet();
+void LaunchRun_Verlet();
+void Inters(int step);
+
 
 
 /*function*/
@@ -234,7 +252,8 @@ void ConstructCrystal()
             atoms[nAtom].r[2] = latticePoints[nLattice].r[2] + cellAtomRs[nCellAtom][2];
 
             atoms[nAtom].type = cellAtomTypes[nCellAtom];
-            atoms[nAtom].id = nAtom - 1;
+            atoms[nAtom].id = nAtom;
+            atoms[nAtom].m = typeMasses[atoms[nAtom].type] * UNITMASS;
             nAtom++;
         }
     }
@@ -243,19 +262,6 @@ void ConstructCrystal()
 }
 
 
-void DumpSingle(char fileName[20])
-{
-    int i;
-    FILE *file;
-    file = fopen(fileName, "w");
-    fprintf(file, "%d\n", atomNumber);
-    fprintf(file, "id type x y z\n");
-    for (i = 0; i < atomNumber; i++)
-    {
-        fprintf(file, "%d %d %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2], atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy);
-    }
-    fclose(file);
-}
 
 double VecDotMul(double vec1[3], double vec2[3])
 {
@@ -472,7 +478,7 @@ void DeleteAtomsByRegion(double block[3][2])
 
 void CreateAtom(double r[3], int type)
 {
-    int i, d;
+    int d;
     for (d = 0; d < 3; d++)
     {
         atoms[atomNumber].r[d] = r[d];
@@ -501,7 +507,7 @@ void FindNeighbors()
         {
             PBC_dr(i, j, dr);
             distance = sqrt(pow(dr[0], 2) + pow(dr[1], 2) + pow(dr[2], 2));
-            if (distance < cutoff)
+            if (distance < neighborCutoff)
             {
                 neighborIndex_i = atoms[i].neighborNumber;
                 neighborIndex_j = atoms[j].neighborNumber;
@@ -665,8 +671,8 @@ void Potential_EAM(int energyFlag, int forceFlag)
                 {
 
                     atoms[i].force[d] += ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                        + (0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM))
-                        * forceRhoTmp) + forcePhiTmp) * atoms[i].neighborList[j].dr[d] / distance;
+                                            + (0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM))
+                                           * forceRhoTmp) + forcePhiTmp) * atoms[i].neighborList[j].dr[d] / distance;
                 }
             }
         }
@@ -751,49 +757,54 @@ void Minimize()
 void Dynamics()
 {
     int step;
+    double time = 0;
     step = 0;
-    LaunchStep();
+    LaunchRun();
     while (time < totalTime)
     {
         PBC_r();
-        FindNeighbors();
+        FindNeighbors(); //neighbour deley
         Potential(0, 1);
-        Controllers(step);
-        IterStep();
+        Inters(step);
+        IterRun();
         time += timeStep;
         step++;
     }
 }
 
-void IterStep()
+void IterRun()
 {
-    if (strcmp(dynamicStyle, "Euler") == 0) IterStep_Euler();
-    else if (strcmp(dynamicStyle, "Verlet") == 0) IterStep_Verlet();
+    if (strcmp(dynamicStyle, "Euler") == 0) IterRun_Euler();
+    else if (strcmp(dynamicStyle, "Verlet") == 0) IterRun_Verlet();
     else printf("Dynamic style not found.\n");
 }
 
-void LanuchStep()
+void LaunchRun()
 {
     if (strcmp(dynamicStyle, "Euler") == 0) 1;
-    else if (strcmp(dynamicStyle, "Verlet") == 0) LanuchStep_Verlet();
-    else printf("Dynamic style not found.\n");
+    else if (strcmp(dynamicStyle, "Verlet") == 0) LaunchRun_Verlet();
+    else printf("Dynamic style not found.\n"); //fix: exit programe
+
+    FILE *file;
+    file = fopen(dumpName, "w");
+    fclose(file);
 }
 
-void IterStep_Euler()
+void IterRun_Euler()
 {
     int i, d;
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < atomNumber; i++)
     {
         for (d = 0; d < 3; d++)
         {
             atoms[i].a[d] = atoms[i].force[d] / atoms[i].m;
             atoms[i].r[d] += atoms[i].v[d] * timeStep;
-            atoms[i].v[d] += atoms[i].a[d] * timestep;
+            atoms[i].v[d] += atoms[i].a[d] * timeStep;
         }
     }
 }
 
-void IterStep_Verlet()
+void IterRun_Verlet()
 {
     int i, d;
     double rTmp;
@@ -803,14 +814,14 @@ void IterStep_Verlet()
         {
             atoms[i].a[d] = atoms[i].force[d] / atoms[i].m;
             rTmp = atoms[i].r[d];
-            atoms[i].r[d] += 2 * atoms[i].r[d] - atoms[i].r_last_Verlet[d] + atoms.a[d] * time_2_Verlet;
+            atoms[i].r[d] += 2 * atoms[i].r[d] - atoms[i].r_last_Verlet[d] + atoms[i].a[d] * time_2_Verlet;
             atoms[i].v[d] = (atoms[i].r[d] - atoms[i].r_last_Verlet[d]) / time_d_2_Verlet;
             atoms[i].r_last_Verlet[d] = rTmp;
         }
     }
 }
 
-void LanuchStep_Verlet()
+void LaunchRun_Verlet()
 {
     int i, d;
     time_2_Verlet = timeStep * timeStep;
@@ -824,16 +835,181 @@ void LanuchStep_Verlet()
         {
             atoms[i].r_last_Verlet[d] = atoms[i].r[d];
             atoms[i].a[d] = atoms[i].force[d] / atoms[i].m;
-            atoms[i].r[d] += atoms[i].v[d] * timeStep + 0.5*time_2_Verlet*atoms[i].a[d];
+            atoms[i].r[d] += atoms[i].v[d] * timeStep + 0.5 * time_2_Verlet * atoms[i].a[d];
         }
     }
 }
 
-void DistrubuteVelocity(double temperature)
+
+
+void Inters(int step)
+{
+    if (step % 10 == 0)
+    {
+        printf("%d\n", step);
+        Dump(step);
+    }
+}
+
+void Dump(int step) //only suitable for orthogonal box
+{
+    int i, d;
+    FILE *file;
+    file = fopen(dumpName, "a+");
+    fprintf(file, "ITEM: TIMESTEP\n");
+    fprintf(file, "%d\n", step);
+    fprintf(file, "ITEM: NUMBER OF ATOMS\n");
+    fprintf(file, "%d\n", atomNumber);
+    fprintf(file, "ITEM: BOX BOUNDS pp pp pp\n");
+    for (d = 0; d < 3; d++)
+    {
+        fprintf(file, "%f %f\n", boxStartPoint[d], boxStartPoint[d] + boxTranVecs[d][d]);
+    }
+    fprintf(file, "ITEM: ATOMS id type x y z fx fy fz pe\n");
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            fprintf(file, "%d %d %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2],
+                    atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy);
+        }
+    }
+    fclose(file);
+}
+
+void DistributeVelocity(double temprature) // need to check correctness
+{
+    double randomNumber;
+    int i;
+    double speed;
+    double prefactor1Base;
+    double prefactor2Base;
+    double prefactor1;
+    double prefactor2;
+
+    prefactor1Base = 4.0 * PI * pow(1.0 / 2.0 / PI / K_B / temprature, 3.0 / 2.0);
+    prefactor2Base = -1.0 / 2.0 / K_B / temprature;
+
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        randomNumber = rand() / (RAND_MAX + 1.0);
+        prefactor1 = prefactor1Base * pow(atoms[i].m, 3.0 / 2.0);
+        prefactor2 = prefactor2Base * atoms[i].m;
+        speed = GenerateSpeed(randomNumber, temprature, prefactor1, prefactor2);
+        RandomSpherePoint(speed, atoms[i].v);
+    }
+    ZeroMomentum();
+    //ZeroRotate();
+}
+
+
+double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2)
+{
+    double P;
+    double s;
+
+    s = 0.0;
+    P = 0.0;
+    while (P <= randomNumber)
+    {
+        P += Density(s, prefactor1, prefactor2) * 0.01;
+        s += 0.01;
+    }
+    return s;
+}
+
+double Density(double v, double prefactor1, double prefactor2)
+{
+    return prefactor1 * pow(EBASE, pow(v, 2) * prefactor2) * pow(v, 2);
+}
+
+void RandomSpherePoint(double r, double v[3])
+{
+    double u, theta;
+    u = (rand() / (RAND_MAX + 1.0) - 0.5) * 2;
+    theta = (rand() / (RAND_MAX + 1.0)) * 2 * PI;
+
+    v[0] = sqrt(1 - u * u) * cos(theta) * r;
+    v[1] = sqrt(1 - u * u) * sin(theta) * r;
+    v[2] = u * r;
+}
+
+void ZeroMomentum()
+{
+    int i, d;
+    double totalMomentum[d];
+    double dv[3];
+
+    totalMomentum[0] = 0, totalMomentum[1] = 0, totalMomentum[2] = 0;
+    totalMass = 0;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            totalMomentum[d] += atoms[i].v[d] * atoms[i].m;
+            totalMass += atoms[i].m;
+        }
+    }
+    for (d = 0; d < 3; d++) dv[d] = -totalMomentum[d] / totalMass;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3, d++)
+        {
+            atoms[i].v[d] += dv[d];
+        }
+    }
+}
+
+double ComputeTemperature()
+{
+    int i, d;
+    double ke = 0.0;
+    double temperature;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; j++)
+        {
+            ke += 0.5 * atom[i].m * atom[i].v[j] * atom[i].v[j];
+        }
+    }
+    temperature = ke * 2.0 / 3.0 / atomNumber / K_B;
+    return temperature;
+}
+
+/*
+double ComputeStress(stress[6])
+{
+    int i;
+    double ke[6];
+    stress[0] = 0; stress[1] = 0; stress[2] = 0; stress[3] = 0; stress[4] = 0; stress[5] = 0;
+    for (i = 0; i < atomNumber; i++)
+    {
+        ke[0] = atoms[i].m * atoms[i].v[0] * atoms[i].v[0];
+        ke[1] = atoms[i].m * atoms[i].v[1] * atoms[i].v[1];
+        ke[2] = atoms[i].m * atoms[i].v[2] * atoms[i].v[2];
+        ke[3] = atoms[i].m * atoms[i].v[0] * atoms[i].v[1];
+        ke[4] = atoms[i].m * atoms[i].v[0] * atoms[i].v[2];
+        ke[5] = atoms[i].m * atoms[i].v[1] * atoms[i].v[2];
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+
+        }
+    }
+}
+
+double ComputeStressComponent(int d1, int d2)
 {
 
 }
 
+double ComputeVolume()
+{
+    double s[3];
+    double volume;
+    VecCroMul(boxTranVecs[0], boxTranVecs[1], s[3]);
+    volume = VecDotMul(s, boxTranVecs[2]);
+}
+*/
 /*main*/
 int main() //
 {
@@ -853,8 +1029,10 @@ int main() //
     cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
     cellAtomRs[1][0] = 0.5 * latticeConstant; cellAtomRs[1][1] = 0.5 * latticeConstant; cellAtomRs[1][2] = 0.5 * latticeConstant;
 
-    cellAtomTypes[0] = 1;
-    cellAtomTypes[1] = 1;
+    cellAtomTypes[0] = 0; //start from 0
+    cellAtomTypes[1] = 0;
+
+    typeMasses[0] = 183;  // relative atomic mass
 
 
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
@@ -862,9 +1040,6 @@ int main() //
     boxTranVecs[0][0] = latticeConstant * 10; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
     boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 10; boxTranVecs[2][1] = 0;
     boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 10;
-
-
-    cutoff = 4 * latticeConstant + 0.1;
 
 
     ConstructReducedLattice();
@@ -879,19 +1054,22 @@ int main() //
     }
 
     //process
+    srand(1);
+    neighborCutoff = 5.5;
     strcpy(potentialName, "EAM");
+    //strcpy(minimizeStyle, "SD");
+    //energyCriterion_min = 0.0001;
+    //lambda_min = 1;
+    //c_min = 0.1;
+    //rho_min = 0.5;
+    //Minimize();
 
-    FindNeighbors();
-    Potential(1, 1);
-    printf("%f\n", totalPotentialEnergy);
-
-    strcpy(minimizeStyle, "SD");
-    energyCriterion_min = 0.0001;
-    lambda_min = 1;
-    c_min = 0.1;
-    rho_min = 0.5;
-    Minimize();
-
+    strcpy(dynamicStyle, "Euler");
+    totalTime = 1;
+    timeStep = 0.001;
+    DistributeVelocity(300);
+    strcpy(dumpName, "force.dump");
+    //Dynamics();
     /*
     double r0[3] = {0,0,0};
     double r1[3] = {0,0,3};
@@ -901,76 +1079,12 @@ int main() //
     FindNeighbors();
     LJ_epsilon = 0.0031;
     LJ_sigma = 2.74;
-    cutoff = 4 * latticeConstant + 0.1;
+    neighborCutoff = 4 * latticeConstant + 0.1;
     InitLJ();
     Potential_LJ(1, 1);
     */
-    char dumpName[20] = "force.xyz";
-    DumpSingle(dumpName);
-    printf("%f\n", totalPotentialEnergy);
-
-}
-
-/*
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-
-#define K_B 1.0
-#define PI 3.1415926
-
-double GenerateV(double random, double temperature, double prefactor1, double prefactor2);
-double Density(double v, double prefactor1, double prefactor2);
-void DistributeVelocity(double temperature, int nV, int seed);
-
-double GenerateV(double random, double temperature, double prefactor1, double prefactor2)
-{
-    double P;
-    double v;
-    double m = 1;
-
-    prefactor1 *= pow(m, 3.0 / 2.0);
-    prefactor2 *= m;
-    v = 0.0;
-    P = 0.0;
-    while (P <= random)
-    {
-        P += Density(v, prefactor1, prefactor2)*0.01;
-        v += 0.01;
-    }
-    return v;
-}
-
-double Density(double v, double prefactor1, double prefactor2)
-{
-    return 2.0 * prefactor1 * pow(2.71828182846, pow(v, 2)*prefactor2)*pow(v, 2);
-}
-
-void DistributeVelocity(double temprature, int nV, int seed)
-{
-    double random;
-    int i;
-    double velocity;
-    double prefactor1;
-    double prefactor2;
-
-    prefactor1 = 4.0 * PI*pow(1.0 / 2.0 / PI / K_B / temprature, 3.0 / 2.0);
-    prefactor2 = -1.0 / 2.0 / K_B / temprature;
-
-
-    srand(seed);
-    for (i = 0; i < nV; i++)
-    {
-        random = rand() / (RAND_MAX + 1.0);
-
-        velocity = GenerateV(random, temprature, prefactor1, prefactor2);
-        printf("%f\n", velocity);
-    }
+    Potential(1, 0);
+    printf("Pe: %f\n", totalPotentialEnergy);
 }
 
 
-int main()
-{
-    DistributeVelocity(300, 10, 2022);
-}
-*/
