@@ -195,9 +195,13 @@ void LaunchRun();
 void IterRun_Euler();
 void IterRun_Verlet();
 void LaunchRun_Verlet();
-void Inters(int step);
+void Introducing(int step);
 
-
+double ComputeTemperature();
+void ComputeStress(double stress[6]);
+void VirialPairs(int i, double virial[6]);
+void VirialPairs_LJ(int i, double virial[6]);
+void VirialPairs_EAM(int i, double virial[6]);
 
 /*function*/
 void ConstructReducedLattice()
@@ -538,9 +542,9 @@ void InitLJ()
 void Potential_LJ(int energyFlag, int forceFlag)
 {
     int i, j, d;
-    double distance, distance8, distance14, dr[3];
+    double distance;
     double energy;
-    double force_temp;
+    double force_inner;
 
     if (energyFlag) totalPotentialEnergy = 0;
     for (i = 0; i < atomNumber; i++)
@@ -563,25 +567,30 @@ void Potential_LJ(int energyFlag, int forceFlag)
             }
             if (forceFlag)
             {
-                distance14 = pow(distance, 14);
-                distance8 = pow(distance, 8);
+                force_inner = LJ_2_sigma6 / pow(distance, 14) - 1 / pow(distance, 8);
                 for (d = 0; d < 3; d++)
                 {
-                    dr[d] = atoms[i].neighborList[j].dr[d];
-                    force_temp = LJ_24_epsilon_sigma6 * (LJ_2_sigma6 * dr[d] / distance14 - dr[d] / distance8);
-                    atoms[i].force[d] -= force_temp;
+                    atoms[i].force[d] -= force_inner * atoms[i].neighborList[j].dr[d];
                 }
+            }
+        }
+        if (forceFlag)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].force[d] *= LJ_24_epsilon_sigma6;
             }
         }
     }
 }
+
 
 void Potential_EAM(int energyFlag, int forceFlag)
 {
     int i, j;
     double distance;
     double atomicEnergy;
-    double forcePhiTmp, forceRhoTmp;
+    double forcePhi, forceRho, forceInner, forceRho_ai;
     int n;
     int d;
     int jAtomIndex;
@@ -613,15 +622,29 @@ void Potential_EAM(int energyFlag, int forceFlag)
     if (energyFlag)
     {
         totalPotentialEnergy = 0;
-        for (i = 0; i < atomNumber; i++)
+    }
+    for (i = 0; i < atomNumber; i++)
+    {
+        if (energyFlag)
         {
             atomicEnergy = 0;
             //rho component for energy
             atomicEnergy += a1_f_EAM * pow(atoms[i].rho_EAM, 0.5) + a2_f_EAM * pow(atoms[i].rho_EAM, 2);
             //phi component for energy
-            for (j = 0; j < atoms[i].neighborNumber; j++)
+        }
+        if (forceFlag)
+        {
+            for (d = 0; d < 3; d++)
             {
-                distance = atoms[i].neighborList[j].distance;
+                atoms[i].force[d] = 0;
+            }
+            forceRho_ai = 0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM;
+        }
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+            distance = atoms[i].neighborList[j].distance;
+            if (energyFlag)
+            {
                 for (n = 0; n < n_phi_EAM; n++)
                 {
                     if (distance < delta_phi_EAM[n])
@@ -629,50 +652,39 @@ void Potential_EAM(int energyFlag, int forceFlag)
                         atomicEnergy += 0.5 * a_phi_EAM[n] * pow((delta_phi_EAM[n] - distance), 3);
                     }
                 }
+                atoms[i].potentialEnergy = atomicEnergy;
+                totalPotentialEnergy += atomicEnergy;
             }
-            atoms[i].potentialEnergy = atomicEnergy;
-            totalPotentialEnergy += atomicEnergy;
-        }
-    }
-    if (forceFlag)
-    {
-        for (i = 0; i < atomNumber; i++)
-        {
-            for (d = 0; d < 3; d++)
+            if (forceFlag)
             {
-                atoms[i].force[d] = 0;
-            }
-            for (j = 0; j < atoms[i].neighborNumber; j++)
-            {
-                distance = atoms[i].neighborList[j].distance;
                 //phi component for force
-                forcePhiTmp = 0;
+                forcePhi = 0.0;
                 for (n = 0; n < n_phi_EAM; n++)
                 {
                     if (distance < delta_phi_EAM[n])
                     {
-                        forcePhiTmp += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
+                        forcePhi += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
                     }
                 }
 
                 //rho component for force
-                forceRhoTmp = 0;
+                forceRho = 0.0;
                 for (n = 0; n < n_rho_EAM; n++)
                 {
                     if (distance < delta_rho_EAM[n])
                     {
-                        forceRhoTmp += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
+                        forceRho += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
                     }
                 }
 
                 // sum force
                 jAtomIndex = atoms[i].neighborList[j].index;
+                forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
+                                + forceRho_ai)
+                               * forceRho) + forcePhi) / distance;
                 for (d = 0; d < 3; d++)
                 {
-
-                    atoms[i].force[d] += ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                                            + (0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM))
-                                           * forceRhoTmp) + forcePhiTmp) * atoms[i].neighborList[j].dr[d] / distance;
+                    atoms[i].force[d] += forceInner * atoms[i].neighborList[j].dr[d];
                 }
             }
         }
@@ -686,6 +698,7 @@ void Potential(int energyFlag, int forceFlag)
     else if (strcmp(potentialName, "EAM") == 0) Potential_EAM(energyFlag, forceFlag);
     else printf("Potential not found.\n");
 }
+
 
 void Minimize_SD()
 {
@@ -765,7 +778,7 @@ void Dynamics()
         PBC_r();
         FindNeighbors(); //neighbour deley
         Potential(0, 1);
-        Inters(step);
+        Introducing(step);
         IterRun();
         time += timeStep;
         step++;
@@ -825,7 +838,7 @@ void LaunchRun_Verlet()
 {
     int i, d;
     time_2_Verlet = timeStep * timeStep;
-    time_d_2_Verlet = timeStep / 2;
+    time_d_2_Verlet = timeStep / 2.0;
     PBC_r();
     FindNeighbors();
     Potential(0, 1);
@@ -842,14 +855,29 @@ void LaunchRun_Verlet()
 
 
 
-void Inters(int step)
+void Introducing(int step)
 {
-    if (step % 10 == 0)
+    double temperature;
+    double stress[6];
+    if (step % 1 == 0)
     {
-        printf("%d\n", step);
+        temperature = ComputeTemperature();
+        ComputeStress(stress);
+        //printf("%d %f %f %f %f %f %f %f\n", step, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5]);
+        double ke = 0;
+        int i;
+        int d;
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)    ke += 1. / 2.*atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
+        }
+        Potential(1, 0);
+        printf("%d %f %f\n", step*10, temperature, ke + totalPotentialEnergy);
         Dump(step);
     }
 }
+
+
 
 void Dump(int step) //only suitable for orthogonal box
 {
@@ -876,7 +904,7 @@ void Dump(int step) //only suitable for orthogonal box
     fclose(file);
 }
 
-void DistributeVelocity(double temprature) // need to check correctness
+void DistributeVelocity(double temperature) // need to check correctness
 {
     double randomNumber;
     int i;
@@ -886,8 +914,8 @@ void DistributeVelocity(double temprature) // need to check correctness
     double prefactor1;
     double prefactor2;
 
-    prefactor1Base = 4.0 * PI * pow(1.0 / 2.0 / PI / K_B / temprature, 3.0 / 2.0);
-    prefactor2Base = -1.0 / 2.0 / K_B / temprature;
+    prefactor1Base = 4.0 * PI * pow(1.0 / 2.0 / PI / K_B / temperature, 3.0 / 2.0);
+    prefactor2Base = -1.0 / 2.0 / K_B / temperature;
 
 
     for (i = 0; i < atomNumber; i++)
@@ -895,7 +923,7 @@ void DistributeVelocity(double temprature) // need to check correctness
         randomNumber = rand() / (RAND_MAX + 1.0);
         prefactor1 = prefactor1Base * pow(atoms[i].m, 3.0 / 2.0);
         prefactor2 = prefactor2Base * atoms[i].m;
-        speed = GenerateSpeed(randomNumber, temprature, prefactor1, prefactor2);
+        speed = GenerateSpeed(randomNumber, temperature, prefactor1, prefactor2);
         RandomSpherePoint(speed, atoms[i].v);
     }
     ZeroMomentum();
@@ -937,8 +965,9 @@ void RandomSpherePoint(double r, double v[3])
 void ZeroMomentum()
 {
     int i, d;
-    double totalMomentum[d];
+    double totalMomentum[3];
     double dv[3];
+    double totalMass;
 
     totalMomentum[0] = 0, totalMomentum[1] = 0, totalMomentum[2] = 0;
     totalMass = 0;
@@ -953,7 +982,7 @@ void ZeroMomentum()
     for (d = 0; d < 3; d++) dv[d] = -totalMomentum[d] / totalMass;
     for (i = 0; i < atomNumber; i++)
     {
-        for (d = 0; d < 3, d++)
+        for (d = 0; d < 3; d++)
         {
             atoms[i].v[d] += dv[d];
         }
@@ -963,19 +992,148 @@ void ZeroMomentum()
 double ComputeTemperature()
 {
     int i, d;
-    double ke = 0.0;
+    double ke;
     double temperature;
+    ke = 0.0;
     for (i = 0; i < atomNumber; i++)
     {
-        for (d = 0; d < 3; j++)
+        for (d = 0; d < 3; d++)
         {
-            ke += 0.5 * atom[i].m * atom[i].v[j] * atom[i].v[j];
+            ke += 0.5 * atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
         }
     }
     temperature = ke * 2.0 / 3.0 / atomNumber / K_B;
     return temperature;
 }
 
+double ComputeVolume()
+{
+    double s[3];
+    VecCroMul(boxTranVecs[0], boxTranVecs[1], s);
+    return VecDotMul(s, boxTranVecs[2]);
+}
+
+void ComputeStress(double stress[6])
+{
+    int i, d;
+    double ke[6];
+    double virial[6];
+    double volume;
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] = 0;
+    }
+    for (i = 0; i < atomNumber; i++)
+    {
+        ke[0] = atoms[i].m * atoms[i].v[0] * atoms[i].v[0];
+        ke[1] = atoms[i].m * atoms[i].v[1] * atoms[i].v[1];
+        ke[2] = atoms[i].m * atoms[i].v[2] * atoms[i].v[2];
+        ke[3] = atoms[i].m * atoms[i].v[0] * atoms[i].v[1];
+        ke[4] = atoms[i].m * atoms[i].v[0] * atoms[i].v[2];
+        ke[5] = atoms[i].m * atoms[i].v[1] * atoms[i].v[2];
+        VirialPairs(i, virial);
+        for (d = 0; d < 6; d++)
+        {
+            stress[d] += ke[d] + virial[d];
+        }
+    }
+    volume = ComputeVolume();
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] /= volume;
+    }
+}
+
+void VirialPairs(int i, double virial[6])
+{
+    if (strcmp(potentialName, "LJ") == 0) VirialPairs_LJ(i, virial);
+    else if (strcmp(potentialName, "EAM") == 0) VirialPairs_EAM(i, virial);
+}
+
+void VirialPairs_EAM(int i, double virial[6])
+{
+    int j, d, n;
+    double force[3];
+    double distance;
+    double forcePhi, forceRho, forceInner, forceRho_ai;
+    int jAtomIndex;
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] = 0;
+    }
+    forceRho_ai = 0.5 * a1_f_EAM * pow(atoms[i].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[i].rho_EAM;
+    for (j = 0; j < atoms[i].neighborNumber; j++)
+    {
+        distance = atoms[i].neighborList[j].distance;
+        //phi component for force
+        forcePhi = 0;
+        for (n = 0; n < n_phi_EAM; n++)
+        {
+            if (distance < delta_phi_EAM[n])
+            {
+                forcePhi += -3 * a_phi_EAM[n] * pow(delta_phi_EAM[n] - distance, 2);
+            }
+        }
+
+        //rho component for force
+        forceRho = 0;
+        for (n = 0; n < n_rho_EAM; n++)
+        {
+            if (distance < delta_rho_EAM[n])
+            {
+                forceRho += -3 * a_rho_EAM[n] * pow(delta_rho_EAM[n] - distance, 2);
+            }
+        }
+
+        // sum force
+        jAtomIndex = atoms[i].neighborList[j].index;
+        forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
+                        + forceRho_ai)
+                       * forceRho) + forcePhi) / distance;
+        for (d = 0; d < 3; d++)
+        {
+            force[d] = forceInner * atoms[i].neighborList[j].dr[d];
+        }
+        virial[0] -= atoms[i].neighborList[j].dr[0] * force[0];
+        virial[1] -= atoms[i].neighborList[j].dr[1] * force[1];
+        virial[2] -= atoms[i].neighborList[j].dr[2] * force[2];
+        virial[3] -= atoms[i].neighborList[j].dr[0] * force[1];
+        virial[4] -= atoms[i].neighborList[j].dr[0] * force[2];
+        virial[5] -= atoms[i].neighborList[j].dr[1] * force[2];
+    }
+}
+
+void VirialPairs_LJ(int i, double virial[6])
+{
+    int j;
+    int d;
+    double forceInner;
+    double force[3];
+    double distance;
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] = 0;
+    }
+    for (j = 0; j < atoms[i].neighborNumber; j++)
+    {
+        distance = atoms[i].neighborList[j].distance;
+        forceInner = LJ_2_sigma6 / pow(distance, 14) - 1 / pow(distance, 8);
+        for (d = 0; d < 3; d++)
+        {
+            force[d] = forceInner * atoms[i].neighborList[j].dr[d];
+        }
+        virial[0] += atoms[i].neighborList[j].dr[0] * force[0];
+        virial[1] += atoms[i].neighborList[j].dr[1] * force[1];
+        virial[2] += atoms[i].neighborList[j].dr[2] * force[2];
+        virial[3] += atoms[i].neighborList[j].dr[0] * force[1];
+        virial[4] += atoms[i].neighborList[j].dr[0] * force[2];
+        virial[5] += atoms[i].neighborList[j].dr[1] * force[2];
+    }
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] *= LJ_24_epsilon_sigma6;
+    }
+}
 /*
 double ComputeStress(stress[6])
 {
@@ -1002,13 +1160,7 @@ double ComputeStressComponent(int d1, int d2)
 
 }
 
-double ComputeVolume()
-{
-    double s[3];
-    double volume;
-    VecCroMul(boxTranVecs[0], boxTranVecs[1], s[3]);
-    volume = VecDotMul(s, boxTranVecs[2]);
-}
+
 */
 /*main*/
 int main() //
@@ -1016,9 +1168,9 @@ int main() //
     double latticeConstant; //unit: Angstrom
     latticeConstant = 3.14;
     //box and atoms
-    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 10;
-    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 10;
-    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 10;
+    latticeSizes[0][0] = 0;  latticeSizes[0][1] = 5;
+    latticeSizes[1][0] = 0;  latticeSizes[1][1] = 5;
+    latticeSizes[2][0] = 0;  latticeSizes[2][1] = 5;
 
     priTranVecs[0][0] = latticeConstant; priTranVecs[1][0] = 0; priTranVecs[2][0] = 0;
     priTranVecs[0][1] = 0; priTranVecs[1][1] = latticeConstant; priTranVecs[2][1] = 0;
@@ -1037,16 +1189,16 @@ int main() //
 
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
 
-    boxTranVecs[0][0] = latticeConstant * 10; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
-    boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 10; boxTranVecs[2][1] = 0;
-    boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 10;
+    boxTranVecs[0][0] = latticeConstant * 5; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
+    boxTranVecs[0][1] = 0;                   boxTranVecs[1][1] = latticeConstant * 5; boxTranVecs[2][1] = 0;
+    boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 5;
 
 
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-    double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
-    DeleteAtomsByRegion(block);
+    //double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
+    //DeleteAtomsByRegion(block);
     if (!boxOrthogonalFlag)
     {
         ComputeBoxRecTranVecs();
@@ -1066,10 +1218,10 @@ int main() //
 
     strcpy(dynamicStyle, "Euler");
     totalTime = 1;
-    timeStep = 0.001;
+    timeStep = 0.0001;
     DistributeVelocity(300);
     strcpy(dumpName, "force.dump");
-    //Dynamics();
+    Dynamics();
     /*
     double r0[3] = {0,0,0};
     double r1[3] = {0,0,3};
@@ -1086,5 +1238,4 @@ int main() //
     Potential(1, 0);
     printf("Pe: %f\n", totalPotentialEnergy);
 }
-
 
