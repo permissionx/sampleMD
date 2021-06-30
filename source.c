@@ -16,6 +16,10 @@
 #define MAX_NEIGHBOR_NUMBER 2000
 #define UNITMASS 0.0001040459571284739
 
+//LJ parameters
+const double LJ_epsilon = 0.0031;
+const double LJ_sigma = 2.74;
+
 //EAM parameters
 const  int n_phi_EAM = 15;
 const  int n_rho_EAM = 4;
@@ -127,8 +131,7 @@ int boxOrthogonalFlag;
 
 char potentialName[20];
 double neighborCutoff;
-double LJ_sigma;
-double LJ_epsilon;
+
 double LJ_24_epsilon_sigma6;
 double LJ_2_sigma6;
 double LJ_4_epsilon;
@@ -148,11 +151,14 @@ double time_d_2_Verlet;
 
 char dumpName[20];
 
+double totalKineticEnergy;
+
 /*function declaration*/
 void ConstructReducedLattice();
 void Mul_3_1(double a[3][3], double b[3], double p[3]); // matrix multiplication 3x1
 void ConstructLattice();
 void ConstructCrystal();
+void InitDump();
 void Dump(int step);
 double VecDotMul(double vec1[3], double vec2[3]); // vector dot multiplication
 void VecCroMul(double vec1[3], double vec2[3], double vecOut[3]); // vector cross multiplication
@@ -195,10 +201,11 @@ void LaunchRun();
 void IterRun_Euler();
 void IterRun_Verlet();
 void LaunchRun_Verlet();
-void Introducing(int step);
+void DynamicsEvents(int step, double time);
 
+void ComputeTotalKineticEnergy();
 double ComputeTemperature();
-void ComputeStress(double stress[6]);
+double ComputeStress(double stress[6]);
 void VirialPairs(int i, double virial[6]);
 void VirialPairs_LJ(int i, double virial[6]);
 void VirialPairs_EAM(int i, double virial[6]);
@@ -708,7 +715,7 @@ void Minimize()
     double deltaEnergy;
     int n;
     n = 0;
-    printf("---Minimization start---\n");
+    printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
     do
     {
@@ -787,16 +794,18 @@ void Dynamics()
     double time = 0;
     step = 0;
     LaunchRun();
+    printf("\n---Dynamics start---\n");
     while (time < totalTime)
     {
         PBC_r();
-        FindNeighbors(); //neighbour deley
+        FindNeighbors(); //neighbour deley to accelerate
         Potential(0, 1);
-        Introducing(step);
+        DynamicsEvents(step, time);
         IterRun();
         time += timeStep;
         step++;
     }
+    printf("---Dynamics end---\n");
 }
 
 void IterRun()
@@ -811,7 +820,11 @@ void LaunchRun()
     if (strcmp(dynamicStyle, "Euler") == 0) 1;
     else if (strcmp(dynamicStyle, "Verlet") == 0) LaunchRun_Verlet();
     else printf("Dynamic style not found.\n"); //fix: exit programe
+    InitDump();
+}
 
+void InitDump()
+{
     FILE *file;
     file = fopen(dumpName, "w");
     fclose(file);
@@ -867,37 +880,11 @@ void LaunchRun_Verlet()
     }
 }
 
-
-
-void Introducing(int step)
-{
-    double temperature;
-    double stress[6];
-    if (step % 1 == 0)
-    {
-        temperature = ComputeTemperature();
-        ComputeStress(stress);
-        //printf("%d %f %f %f %f %f %f %f\n", step, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5]);
-        double ke = 0;
-        int i;
-        int d;
-        for (i = 0; i < atomNumber; i++)
-        {
-            for (d = 0; d < 3; d++)    ke += 1. / 2.*atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
-        }
-        Potential(1, 0);
-        printf("%d %f %f\n", step * 10, temperature, ke + totalPotentialEnergy);
-        Dump(step);
-    }
-}
-
-
-
 void Dump(int step) //only suitable for orthogonal box
 {
     int i, d;
     FILE *file;
-    file = fopen(dumpName, "a+");
+    file = fopen(dumpName, "a");
     fprintf(file, "ITEM: TIMESTEP\n");
     fprintf(file, "%d\n", step);
     fprintf(file, "ITEM: NUMBER OF ATOMS\n");
@@ -1005,19 +992,20 @@ void ZeroMomentum()
 
 double ComputeTemperature()
 {
-    int i, d;
-    double ke;
-    double temperature;
-    ke = 0.0;
-    for (i = 0; i < atomNumber; i++)
+    return totalKineticEnergy * 2.0 / 3.0 / atomNumber / K_B;
+}
+
+void ComputeTotalKineticEnergy()
+{
+    int i,d;
+    totalKineticEnergy = 0.0;
+    for (i=0;i<atomNumber;i++)
     {
-        for (d = 0; d < 3; d++)
+        for(d=0;d<3;d++)
         {
-            ke += 0.5 * atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
+            totalKineticEnergy +=  0.5 * atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
         }
     }
-    temperature = ke * 2.0 / 3.0 / atomNumber / K_B;
-    return temperature;
 }
 
 double ComputeVolume()
@@ -1027,7 +1015,7 @@ double ComputeVolume()
     return VecDotMul(s, boxTranVecs[2]);
 }
 
-void ComputeStress(double stress[6])
+double ComputeStress(double stress[6]) //need to check correctness. need to fix the unit. 
 {
     int i, d;
     double ke[6];
@@ -1048,7 +1036,7 @@ void ComputeStress(double stress[6])
         VirialPairs(i, virial);
         for (d = 0; d < 6; d++)
         {
-            stress[d] += ke[d] + virial[d];
+            stress[d] -= ke[d] + virial[d];
         }
     }
     volume = ComputeVolume();
@@ -1056,6 +1044,7 @@ void ComputeStress(double stress[6])
     {
         stress[d] /= volume;
     }
+    return  -(stress[0] + stress[1] + stress[2])/3;
 }
 
 void VirialPairs(int i, double virial[6])
@@ -1148,34 +1137,28 @@ void VirialPairs_LJ(int i, double virial[6])
         virial[d] *= LJ_24_epsilon_sigma6;
     }
 }
-/*
-double ComputeStress(stress[6])
-{
-    int i;
-    double ke[6];
-    stress[0] = 0; stress[1] = 0; stress[2] = 0; stress[3] = 0; stress[4] = 0; stress[5] = 0;
-    for (i = 0; i < atomNumber; i++)
-    {
-        ke[0] = atoms[i].m * atoms[i].v[0] * atoms[i].v[0];
-        ke[1] = atoms[i].m * atoms[i].v[1] * atoms[i].v[1];
-        ke[2] = atoms[i].m * atoms[i].v[2] * atoms[i].v[2];
-        ke[3] = atoms[i].m * atoms[i].v[0] * atoms[i].v[1];
-        ke[4] = atoms[i].m * atoms[i].v[0] * atoms[i].v[2];
-        ke[5] = atoms[i].m * atoms[i].v[1] * atoms[i].v[2];
-        for (j = 0; j < atoms[i].neighborNumber; j++)
-        {
 
-        }
+void DynamicsEvents(int step, double time)
+{
+    double temperature;
+    double stress[6];
+    if (step == 0)
+    {
+        printf("%d atoms are in the dynamic simulation.\n", atomNumber);
+        printf("step time temperature stress[0] stress[1] stress[2] stress[3] stress[4] stress[5]\n");
+    }
+    if (step % 1000 == 0)
+    {
+        temperature = ComputeTemperature();
+        ComputeStress(stress);
+        printf("%d %f %f %f %f %f %f %f %f\n", step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5]);
+        ComputeTotalKineticEnergy();
+        Potential(1, 0);
+        Dump(step);
     }
 }
 
-double ComputeStressComponent(int d1, int d2)
-{
 
-}
-
-
-*/
 /*main*/
 int main() //
 {
@@ -1220,7 +1203,7 @@ int main() //
     }
 
     //process
-    srand(1);
+    //--------------minimize--------------
     neighborCutoff = 5.5;
     strcpy(potentialName, "EAM");
     strcpy(minimizeStyle, "SD");
@@ -1230,12 +1213,14 @@ int main() //
     rho_min = 0.5;
     Minimize();
 
-    //strcpy(dynamicStyle, "Euler");
-    //totalTime = 1;
-    //timeStep = 0.0001;
-    //DistributeVelocity(300);
-    //strcpy(dumpName, "force.dump");
-    //Dynamics();
+    //-------------dynamic----------------
+    srand(1);
+    strcpy(dynamicStyle, "Euler");
+    totalTime = 1;
+    timeStep = 0.0001;
+    DistributeVelocity(2000);
+    strcpy(dumpName, "force.dump");
+    Dynamics();
 
     //PBC_r();
     //FindNeighbors();
@@ -1249,8 +1234,6 @@ int main() //
     CreateAtom(r1,1);
 
     FindNeighbors();
-    LJ_epsilon = 0.0031;
-    LJ_sigma = 2.74;
     neighborCutoff = 4 * latticeConstant + 0.1;
     InitLJ();
     Potential_LJ(1, 1);
