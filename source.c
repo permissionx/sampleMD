@@ -178,8 +178,8 @@ void Potential_LJ(int energyFlag, int forceFlag);
 void Potential_EAM(int energyFlag, int forceFlag);
 
 void Minimize();
-void Minimize_SD();
-void Minimize_CG();
+void MinDirection();
+void MinDirection_SD();
 double LineMinimize();
 
 
@@ -589,7 +589,7 @@ void Potential_EAM(int energyFlag, int forceFlag)
 {
     int i, j;
     double distance;
-    double atomicEnergy;
+    double energyPhi, energyRho;
     double forcePhi, forceRho, forceInner, forceRho_ai;
     int n;
     int d;
@@ -621,15 +621,16 @@ void Potential_EAM(int energyFlag, int forceFlag)
 
     if (energyFlag)
     {
-        totalPotentialEnergy = 0;
+        totalPotentialEnergy = 0.0;
     }
     for (i = 0; i < atomNumber; i++)
     {
         if (energyFlag)
         {
-            atomicEnergy = 0;
             //rho component for energy
-            atomicEnergy += a1_f_EAM * pow(atoms[i].rho_EAM, 0.5) + a2_f_EAM * pow(atoms[i].rho_EAM, 2);
+            energyRho = a1_f_EAM * pow(atoms[i].rho_EAM, 0.5) + a2_f_EAM * pow(atoms[i].rho_EAM, 2);
+            totalPotentialEnergy += energyRho;
+            atoms[i].potentialEnergy = energyRho;
             //phi component for energy
         }
         if (forceFlag)
@@ -645,15 +646,17 @@ void Potential_EAM(int energyFlag, int forceFlag)
             distance = atoms[i].neighborList[j].distance;
             if (energyFlag)
             {
+                energyPhi = 0.0;
                 for (n = 0; n < n_phi_EAM; n++)
                 {
                     if (distance < delta_phi_EAM[n])
                     {
-                        atomicEnergy += 0.5 * a_phi_EAM[n] * pow((delta_phi_EAM[n] - distance), 3);
+                        energyPhi += a_phi_EAM[n] * pow((delta_phi_EAM[n] - distance), 3);
                     }
                 }
-                atoms[i].potentialEnergy = atomicEnergy;
-                totalPotentialEnergy += atomicEnergy;
+                energyPhi *= 0.5;
+                atoms[i].potentialEnergy += energyPhi;
+                totalPotentialEnergy += energyPhi;
             }
             if (forceFlag)
             {
@@ -700,25 +703,41 @@ void Potential(int energyFlag, int forceFlag)
 }
 
 
-void Minimize_SD()
+void Minimize()
 {
-    int i, d;
     double deltaEnergy;
-
-    PBC_r();
-    FindNeighbors();
+    int n;
+    n = 0;
+    printf("---Minimization start---\n");
+    printf("iter pe dE\n");
     do
     {
-        Potential(0, 1);
-        for (i = 0; i < atomNumber; i++)
-        {
-            for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
-        }
+        n += 1;
+        MinDirection();
         deltaEnergy = LineMinimize();
-        printf("%f\n", deltaEnergy);
+        printf("%d %f %f\n", n, totalPotentialEnergy, deltaEnergy);
     } while (deltaEnergy > energyCriterion_min);
+    printf("---Minimization end---\n");
 }
 
+void MinDirection()
+{
+    if (strcmp(minimizeStyle, "SD") == 0) MinDirection_SD();
+    //else if (minimizeStyle == "CG") Minimize_CG();
+    else printf("Minimize style not found.\n");
+}
+
+void MinDirection_SD()
+{
+    int i,d;
+    PBC_r();
+    FindNeighbors();
+    Potential(0, 1);
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
+    }
+}
 
 
 double LineMinimize()
@@ -760,12 +779,7 @@ double LineMinimize()
     return startEnergy - totalPotentialEnergy;
 }
 
-void Minimize()
-{
-    if (strcmp(minimizeStyle, "SD") == 0) Minimize_SD();
-    //else if (minimizeStyle == "CG") Minimize_CG();
-    else printf("Minimize style not found.\n");
-}
+
 
 void Dynamics()
 {
@@ -872,7 +886,7 @@ void Introducing(int step)
             for (d = 0; d < 3; d++)    ke += 1. / 2.*atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
         }
         Potential(1, 0);
-        printf("%d %f %f\n", step*10, temperature, ke + totalPotentialEnergy);
+        printf("%d %f %f\n", step * 10, temperature, ke + totalPotentialEnergy);
         Dump(step);
     }
 }
@@ -1197,8 +1211,8 @@ int main() //
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-    //double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
-    //DeleteAtomsByRegion(block);
+    double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
+    DeleteAtomsByRegion(block);
     if (!boxOrthogonalFlag)
     {
         ComputeBoxRecTranVecs();
@@ -1209,19 +1223,25 @@ int main() //
     srand(1);
     neighborCutoff = 5.5;
     strcpy(potentialName, "EAM");
-    //strcpy(minimizeStyle, "SD");
-    //energyCriterion_min = 0.0001;
-    //lambda_min = 1;
-    //c_min = 0.1;
-    //rho_min = 0.5;
-    //Minimize();
+    strcpy(minimizeStyle, "SD");
+    energyCriterion_min = 0.0001;
+    lambda_min = 1;
+    c_min = 0.1;
+    rho_min = 0.5;
+    Minimize();
 
-    strcpy(dynamicStyle, "Euler");
-    totalTime = 1;
-    timeStep = 0.0001;
-    DistributeVelocity(300);
-    strcpy(dumpName, "force.dump");
-    Dynamics();
+    //strcpy(dynamicStyle, "Euler");
+    //totalTime = 1;
+    //timeStep = 0.0001;
+    //DistributeVelocity(300);
+    //strcpy(dumpName, "force.dump");
+    //Dynamics();
+
+    //PBC_r();
+    //FindNeighbors();
+    //Potential(1, 1);
+    //Dump(0);
+    //printf("Pe: %f\n", totalPotentialEnergy);
     /*
     double r0[3] = {0,0,0};
     double r1[3] = {0,0,3};
@@ -1235,7 +1255,5 @@ int main() //
     InitLJ();
     Potential_LJ(1, 1);
     */
-    Potential(1, 0);
-    printf("Pe: %f\n", totalPotentialEnergy);
 }
 
