@@ -210,6 +210,7 @@ void VirialPairs(int i, double virial[6]);
 void VirialPairs_LJ(int i, double virial[6]);
 void VirialPairs_EAM(int i, double virial[6]);
 
+
 /*function*/
 void ConstructReducedLattice()
 {
@@ -487,6 +488,7 @@ void DeleteAtomsByRegion(double block[3][2])
     }
 }
 
+
 void CreateAtom(double r[3], int type)
 {
     int d;
@@ -499,6 +501,7 @@ void CreateAtom(double r[3], int type)
     atoms[atomNumber].id = maxID;
     atomNumber++;
 }
+
 
 void FindNeighbors()
 {
@@ -545,6 +548,7 @@ void InitLJ()
     LJ_24_epsilon_sigma6 = 24 * LJ_epsilon * pow(LJ_sigma, 6);
     LJ_2_sigma6 = 2 * pow(LJ_sigma, 6);
 }
+
 
 void Potential_LJ(int energyFlag, int forceFlag)
 {
@@ -727,12 +731,14 @@ void Minimize()
     printf("---Minimization end---\n");
 }
 
+
 void MinDirection()
 {
     if (strcmp(minimizeStyle, "SD") == 0) MinDirection_SD();
     //else if (minimizeStyle == "CG") Minimize_CG();
     else printf("Minimize style not found.\n");
 }
+
 
 void MinDirection_SD()
 {
@@ -766,7 +772,6 @@ double LineMinimize()
             atoms[i].lineMinStartR[d] = atoms[i].r[d];
         }
     }
-
     do
     {
         acceptableEnergy = startEnergy;
@@ -785,7 +790,6 @@ double LineMinimize()
     } while (acceptableEnergy <= totalPotentialEnergy);
     return startEnergy - totalPotentialEnergy;
 }
-
 
 
 void Dynamics()
@@ -808,12 +812,14 @@ void Dynamics()
     printf("---Dynamics end---\n");
 }
 
+
 void IterRun()
 {
     if (strcmp(dynamicStyle, "Euler") == 0) IterRun_Euler();
     else if (strcmp(dynamicStyle, "Verlet") == 0) IterRun_Verlet();
     else printf("Dynamic style not found.\n");
 }
+
 
 void LaunchRun()
 {
@@ -823,12 +829,14 @@ void LaunchRun()
     InitDump();
 }
 
+
 void InitDump()
 {
     FILE *file;
     file = fopen(dumpName, "w");
     fclose(file);
 }
+
 
 void IterRun_Euler()
 {
@@ -843,6 +851,7 @@ void IterRun_Euler()
         }
     }
 }
+
 
 void IterRun_Verlet()
 {
@@ -860,6 +869,7 @@ void IterRun_Verlet()
         }
     }
 }
+
 
 void LaunchRun_Verlet()
 {
@@ -879,6 +889,7 @@ void LaunchRun_Verlet()
         }
     }
 }
+
 
 void Dump(int step) //only suitable for orthogonal box
 {
@@ -904,6 +915,7 @@ void Dump(int step) //only suitable for orthogonal box
     }
     fclose(file);
 }
+
 
 void DistributeVelocity(double temperature) // need to check correctness
 {
@@ -947,10 +959,12 @@ double GenerateSpeed(double randomNumber, double temperature, double prefactor1,
     return s;
 }
 
+
 double Density(double v, double prefactor1, double prefactor2)
 {
     return prefactor1 * pow(EBASE, pow(v, 2) * prefactor2) * pow(v, 2);
 }
+
 
 void RandomSpherePoint(double r, double v[3])
 {
@@ -962,6 +976,7 @@ void RandomSpherePoint(double r, double v[3])
     v[1] = sqrt(1 - u * u) * sin(theta) * r;
     v[2] = u * r;
 }
+
 
 void ZeroMomentum()
 {
@@ -990,10 +1005,12 @@ void ZeroMomentum()
     }
 }
 
+
 double ComputeTemperature()
 {
     return totalKineticEnergy * 2.0 / 3.0 / atomNumber / K_B;
 }
+
 
 void ComputeTotalKineticEnergy()
 {
@@ -1008,6 +1025,7 @@ void ComputeTotalKineticEnergy()
     }
 }
 
+
 double ComputeVolume()
 {
     double s[3];
@@ -1015,7 +1033,8 @@ double ComputeVolume()
     return VecDotMul(s, boxTranVecs[2]);
 }
 
-double ComputeStress(double stress[6]) //need to check correctness. need to fix the unit. 
+
+double ComputeStress(double stress[6]) //need to check correctness. need to fix the unit.   
 {
     int i, d;
     double ke[6];
@@ -1025,7 +1044,7 @@ double ComputeStress(double stress[6]) //need to check correctness. need to fix 
     {
         stress[d] = 0;
     }
-    for (i = 0; i < atomNumber; i++)
+    for (i = 0; i < atomNumber; i++)   // need to be divided by dimension
     {
         ke[0] = atoms[i].m * atoms[i].v[0] * atoms[i].v[0];
         ke[1] = atoms[i].m * atoms[i].v[1] * atoms[i].v[1];
@@ -1047,11 +1066,13 @@ double ComputeStress(double stress[6]) //need to check correctness. need to fix 
     return  -(stress[0] + stress[1] + stress[2])/3;
 }
 
+
 void VirialPairs(int i, double virial[6])
 {
     if (strcmp(potentialName, "LJ") == 0) VirialPairs_LJ(i, virial);
     else if (strcmp(potentialName, "EAM") == 0) VirialPairs_EAM(i, virial);
 }
+
 
 void VirialPairs_EAM(int i, double virial[6])
 {
@@ -1106,6 +1127,7 @@ void VirialPairs_EAM(int i, double virial[6])
     }
 }
 
+
 void VirialPairs_LJ(int i, double virial[6])
 {
     int j;
@@ -1138,6 +1160,9 @@ void VirialPairs_LJ(int i, double virial[6])
     }
 }
 
+
+
+
 void DynamicsEvents(int step, double time)
 {
     double temperature;
@@ -1157,7 +1182,9 @@ void DynamicsEvents(int step, double time)
         Dump(step);
     }
 }
+//need to do : 温度控制 压强控制 共轭梯度法 Verlet算法 径向分布函数 计算动力学温度和能量曲线 弛豫曲线 等概率球形模型
 
+ 
 
 /*main*/
 int main() //
@@ -1183,7 +1210,7 @@ int main() //
 
     typeMasses[0] = 183;  // relative atomic mass
 
-
+   
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
 
     boxTranVecs[0][0] = latticeConstant * 5; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
