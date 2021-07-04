@@ -108,6 +108,7 @@ struct Atom
     double v[3], a[3];
     double m;
     double r_last_Verlet[3];
+    int crossBoundary[3];
 };
 
 
@@ -147,11 +148,15 @@ char dynamicStyle[20];
 double totalTime;
 double timeStep;
 double time_2_Verlet;
-double time_d_2_Verlet;
+double time_m_2_Verlet;
 
 char dumpName[20];
 
 double totalKineticEnergy;
+
+double tau_NoseHoover;
+double tau2_r_NoseHoover; // 1/tau^2
+double xi_NoseHoover;
 
 /*function declaration*/
 void ConstructReducedLattice();
@@ -190,7 +195,7 @@ double LineMinimize();
 
 
 double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2);
-double Density(double v, double prefactor1, double prefactor2);
+double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2);
 void DistributeVelocity(double temperature);
 void RandomSpherePoint(double r, double v[3]);
 void ZeroMomentum();
@@ -201,7 +206,7 @@ void LaunchRun();
 void IterRun_Euler();
 void IterRun_Verlet();
 void LaunchRun_Verlet();
-void DynamicsEvents(int step, double time);
+void DynamicsProcessing(int step, double time);
 
 void ComputeTotalKineticEnergy();
 double ComputeTemperature();
@@ -210,6 +215,8 @@ void VirialPairs(int i, double virial[6]);
 void VirialPairs_LJ(int i, double virial[6]);
 void VirialPairs_EAM(int i, double virial[6]);
 
+void Thermostat_NoseHoover(int step, double targetTemperature);
+void Friction_NoseHoover();
 
 /*function*/
 void ConstructReducedLattice()
@@ -255,6 +262,8 @@ void ConstructCrystal()
     int nLattice, nAtom, nCellAtom;
     nAtom = 0;
 
+    ConstructReducedLattice();
+    ConstructLattice();
     for (nLattice = 0; nLattice < latticePointNumber; nLattice++)
     {
         for (nCellAtom = 0; nCellAtom < cellAtomNumber; nCellAtom++)
@@ -351,6 +360,7 @@ void PBC_r()
     }
     else
     {
+        ComputeAtomBoxReR();
         PBC_r_nonorthogonal();
     }
 }
@@ -363,6 +373,7 @@ void PBC_dr(int i, int j, double dr[3])
     }
     else
     {
+        ComputeAtomBoxReR();
         PBC_dr_nonorthogonal(i, j, dr);
     }
 }
@@ -427,10 +438,12 @@ void PBC_r_orthogonal()
             if (atoms[n].r[d] < boxStartPoint[d])
             {
                 atoms[n].r[d] += boxTranVecs[d][d];
+                atoms[n].r_last_Verlet[d] += boxTranVecs[d][d];
             }
             else if (atoms[n].r[d] >= boxStartPoint[d] + boxTranVecs[d][d])
             {
                 atoms[n].r[d] -= boxTranVecs[d][d];
+                atoms[n].r_last_Verlet[d] -= boxTranVecs[d][d];
             }
         }
     }
@@ -694,8 +707,8 @@ void Potential_EAM(int energyFlag, int forceFlag)
                 // sum force
                 jAtomIndex = atoms[i].neighborList[j].index;
                 forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                                + forceRho_ai)
-                               * forceRho) + forcePhi) / distance;
+                    + forceRho_ai)
+                    * forceRho) + forcePhi) / distance;
                 for (d = 0; d < 3; d++)
                 {
                     atoms[i].force[d] += forceInner * atoms[i].neighborList[j].dr[d];
@@ -710,7 +723,7 @@ void Potential(int energyFlag, int forceFlag)
 {
     if (strcmp(potentialName, "LJ") == 0) Potential_LJ(energyFlag, forceFlag);
     else if (strcmp(potentialName, "EAM") == 0) Potential_EAM(energyFlag, forceFlag);
-    else printf("Potential not found.\n");
+    else printf("\nPotential not found. Program terminated.\n"), exit(-1);
 }
 
 
@@ -736,13 +749,13 @@ void MinDirection()
 {
     if (strcmp(minimizeStyle, "SD") == 0) MinDirection_SD();
     //else if (minimizeStyle == "CG") Minimize_CG();
-    else printf("Minimize style not found.\n");
+    else printf("\nMinimize style not found. Program terminated.\n"), exit(-1);
 }
 
 
 void MinDirection_SD()
 {
-    int i,d;
+    int i, d;
     PBC_r();
     FindNeighbors();
     Potential(0, 1);
@@ -804,7 +817,7 @@ void Dynamics()
         PBC_r();
         FindNeighbors(); //neighbour deley to accelerate
         Potential(0, 1);
-        DynamicsEvents(step, time);
+        DynamicsProcessing(step, time);
         IterRun();
         time += timeStep;
         step++;
@@ -817,7 +830,7 @@ void IterRun()
 {
     if (strcmp(dynamicStyle, "Euler") == 0) IterRun_Euler();
     else if (strcmp(dynamicStyle, "Verlet") == 0) IterRun_Verlet();
-    else printf("Dynamic style not found.\n");
+    else printf("\nDynamic style not found. Program terminated.\n"), exit(-1);
 }
 
 
@@ -825,7 +838,7 @@ void LaunchRun()
 {
     if (strcmp(dynamicStyle, "Euler") == 0) 1;
     else if (strcmp(dynamicStyle, "Verlet") == 0) LaunchRun_Verlet();
-    else printf("Dynamic style not found.\n"); //fix: exit programe
+    else printf("\nDynamic style not found. Program terminated.\n"), exit(-1); //fix: exit programe
     InitDump();
 }
 
@@ -863,8 +876,8 @@ void IterRun_Verlet()
         {
             atoms[i].a[d] = atoms[i].force[d] / atoms[i].m;
             rTmp = atoms[i].r[d];
-            atoms[i].r[d] += 2 * atoms[i].r[d] - atoms[i].r_last_Verlet[d] + atoms[i].a[d] * time_2_Verlet;
-            atoms[i].v[d] = (atoms[i].r[d] - atoms[i].r_last_Verlet[d]) / time_d_2_Verlet;
+            atoms[i].r[d] = 2 * atoms[i].r[d] - atoms[i].r_last_Verlet[d] + atoms[i].a[d] * time_2_Verlet;
+            atoms[i].v[d] = (atoms[i].r[d] - atoms[i].r_last_Verlet[d]) / time_m_2_Verlet;
             atoms[i].r_last_Verlet[d] = rTmp;
         }
     }
@@ -875,7 +888,7 @@ void LaunchRun_Verlet()
 {
     int i, d;
     time_2_Verlet = timeStep * timeStep;
-    time_d_2_Verlet = timeStep / 2.0;
+    time_m_2_Verlet = timeStep * 2.0;
     PBC_r();
     FindNeighbors();
     Potential(0, 1);
@@ -910,7 +923,7 @@ void Dump(int step) //only suitable for orthogonal box
         for (i = 0; i < atomNumber; i++)
         {
             fprintf(file, "%d %d %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2],
-                    atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy);
+                atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy);
         }
     }
     fclose(file);
@@ -953,14 +966,14 @@ double GenerateSpeed(double randomNumber, double temperature, double prefactor1,
     P = 0.0;
     while (P <= randomNumber)
     {
-        P += Density(s, prefactor1, prefactor2) * 0.01;
+        P += MaxwellProbabilityDensity(s, prefactor1, prefactor2) * 0.01;
         s += 0.01;
     }
     return s;
 }
 
 
-double Density(double v, double prefactor1, double prefactor2)
+double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2)
 {
     return prefactor1 * pow(EBASE, pow(v, 2) * prefactor2) * pow(v, 2);
 }
@@ -1008,19 +1021,20 @@ void ZeroMomentum()
 
 double ComputeTemperature()
 {
+    ComputeTotalKineticEnergy();
     return totalKineticEnergy * 2.0 / 3.0 / atomNumber / K_B;
 }
 
 
 void ComputeTotalKineticEnergy()
 {
-    int i,d;
+    int i, d;
     totalKineticEnergy = 0.0;
-    for (i=0;i<atomNumber;i++)
+    for (i = 0; i < atomNumber; i++)
     {
-        for(d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
-            totalKineticEnergy +=  0.5 * atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
+            totalKineticEnergy += 0.5 * atoms[i].m * atoms[i].v[d] * atoms[i].v[d];
         }
     }
 }
@@ -1034,7 +1048,7 @@ double ComputeVolume()
 }
 
 
-double ComputeStress(double stress[6]) //need to check correctness. need to fix the unit.   
+double ComputeStress(double stress[6]) //need to check correctness. need to fix the unit.
 {
     int i, d;
     double ke[6];
@@ -1063,7 +1077,7 @@ double ComputeStress(double stress[6]) //need to check correctness. need to fix 
     {
         stress[d] /= volume;
     }
-    return  -(stress[0] + stress[1] + stress[2])/3;
+    return  -(stress[0] + stress[1] + stress[2]) / 3;
 }
 
 
@@ -1112,8 +1126,8 @@ void VirialPairs_EAM(int i, double virial[6])
         // sum force
         jAtomIndex = atoms[i].neighborList[j].index;
         forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                        + forceRho_ai)
-                       * forceRho) + forcePhi) / distance;
+            + forceRho_ai)
+            * forceRho) + forcePhi) / distance;
         for (d = 0; d < 3; d++)
         {
             force[d] = forceInner * atoms[i].neighborList[j].dr[d];
@@ -1160,10 +1174,46 @@ void VirialPairs_LJ(int i, double virial[6])
     }
 }
 
+void Thermostat_NoseHoover(int step, double targetTemperature)
+{
+    double temperature;
+    if (step == 0)
+    {
+        xi_NoseHoover = 0;
+        tau2_r_NoseHoover = 1.0 / tau_NoseHoover / tau_NoseHoover;
+    }
+    else
+    {
+        temperature = ComputeTemperature();
+        xi_NoseHoover += tau2_r_NoseHoover * (temperature / targetTemperature - 1) * timeStep;
+        /*
+        if (xi_NoseHoover > 3.0)
+        {
+            xi_NoseHoover = 3.0;
+        }
+        else if (xi_NoseHoover < -3.0)
+        {
+            xi_NoseHoover = -3.0;
+        }
+        */
+    }
+    Friction_NoseHoover();
+}
+
+void Friction_NoseHoover()
+{
+    int i, d;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].force[d] -= atoms[i].m * xi_NoseHoover * atoms[i].v[d];
+        }
+    }
+}
 
 
-
-void DynamicsEvents(int step, double time)
+void DynamicsProcessing(int step, double time)
 {
     double temperature;
     double stress[6];
@@ -1176,15 +1226,20 @@ void DynamicsEvents(int step, double time)
     {
         temperature = ComputeTemperature();
         ComputeStress(stress);
-        printf("%d %f %f %f %f %f %f %f %f\n", step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5]);
-        ComputeTotalKineticEnergy();
+        printf("%d %f %f %f %f %f %f %f %f %f \n",
+            step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], xi_NoseHoover);
         Potential(1, 0);
         Dump(step);
     }
+    Thermostat_NoseHoover(step, 300);
 }
-//need to do : 温度控制 压强控制 共轭梯度法 Verlet算法 径向分布函数 计算动力学温度和能量曲线 弛豫曲线 等概率球形模型
 
- 
+
+//todo list : 压强控制 共轭梯度法 径向分布函数 计算动力学温度和能量曲线 弛豫曲线 等概率球形模型
+// 通过noose hoover 介绍系综原理
+// 介绍数值积分方法
+
+
 
 /*main*/
 int main() //
@@ -1210,7 +1265,7 @@ int main() //
 
     typeMasses[0] = 183;  // relative atomic mass
 
-   
+
     boxStartPoint[0] = 0; boxStartPoint[1] = 0; boxStartPoint[2] = 0;
 
     boxTranVecs[0][0] = latticeConstant * 5; boxTranVecs[1][0] = 0;                   boxTranVecs[2][0] = 0;
@@ -1218,8 +1273,6 @@ int main() //
     boxTranVecs[0][2] = 0;                   boxTranVecs[1][2] = 0;                   boxTranVecs[2][2] = latticeConstant * 5;
 
 
-    ConstructReducedLattice();
-    ConstructLattice();
     ConstructCrystal();
     double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
     DeleteAtomsByRegion(block);
@@ -1232,6 +1285,7 @@ int main() //
     //process
     //--------------minimize--------------
     neighborCutoff = 5.5;
+
     strcpy(potentialName, "EAM");
     strcpy(minimizeStyle, "SD");
     energyCriterion_min = 0.0001;
@@ -1243,9 +1297,10 @@ int main() //
     //-------------dynamic----------------
     srand(1);
     strcpy(dynamicStyle, "Euler");
-    totalTime = 1;
+    totalTime = 10;
     timeStep = 0.0001;
-    DistributeVelocity(2000);
+    tau_NoseHoover = 0.5;
+    DistributeVelocity(1000);
     strcpy(dumpName, "force.dump");
     Dynamics();
 
