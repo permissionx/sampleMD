@@ -102,9 +102,9 @@ struct Atom
     double force[3];
     int neighborNumber;
     struct Neighbor neighborList[MAX_NEIGHBOR_NUMBER]; // error if exceed
+    double lastForce_CG[3];
     double minDirection[3];
     double lineMinStartR[3];
-    double lastForce_CG[3];
     double v[3], a[3];
     double m;
     double r_last_Verlet[3];
@@ -154,9 +154,12 @@ char dumpName[20];
 
 double totalKineticEnergy;
 
+
 double tau_NoseHoover;
 double tau2_r_NoseHoover; // 1/tau^2
 double xi_NoseHoover;
+double tau_Berendsen;
+char thermostatStyle[20];
 
 /*function declaration*/
 void ConstructReducedLattice();
@@ -189,8 +192,9 @@ void Potential_LJ(int energyFlag, int forceFlag);
 void Potential_EAM(int energyFlag, int forceFlag);
 
 void Minimize();
-void MinDirection();
+void MinDirection(int step);
 void MinDirection_SD();
+void MinDirection_CG(int step);
 double LineMinimize();
 
 
@@ -217,6 +221,7 @@ void VirialPairs_EAM(int i, double virial[6]);
 
 void Thermostat_NoseHoover(int step, double targetTemperature);
 void Friction_NoseHoover();
+void Thermostat_Berendsen(double targetTemperature);
 
 /*function*/
 void ConstructReducedLattice()
@@ -730,25 +735,25 @@ void Potential(int energyFlag, int forceFlag)
 void Minimize()
 {
     double deltaEnergy;
-    int n;
-    n = 0;
+    int step;
+    step = 0;
     printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
     do
     {
-        n += 1;
-        MinDirection();
+        MinDirection(step);
         deltaEnergy = LineMinimize();
-        printf("%d %f %f\n", n, totalPotentialEnergy, deltaEnergy);
+        step += 1;
+        printf("%d %f %10.20f\n", step, totalPotentialEnergy, deltaEnergy);
     } while (deltaEnergy > energyCriterion_min);
     printf("---Minimization end---\n");
 }
 
 
-void MinDirection()
+void MinDirection(int step)
 {
     if (strcmp(minimizeStyle, "SD") == 0) MinDirection_SD();
-    //else if (minimizeStyle == "CG") Minimize_CG();
+    else if (strcmp(minimizeStyle, "CG") == 0) MinDirection_CG(step);
     else printf("\nMinimize style not found. Program terminated.\n"), exit(-1);
 }
 
@@ -762,6 +767,47 @@ void MinDirection_SD()
     for (i = 0; i < atomNumber; i++)
     {
         for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
+    }
+}
+
+void MinDirection_CG(int step)
+{
+    int i,d;
+    double beta_up, beta_down, beta;
+    PBC_r();
+    FindNeighbors();
+    Potential(0, 1);
+    if (step == 0)
+    {
+        for (i=0; i<atomNumber;i++)
+        {
+            for(d=0;d<3;d++)
+            {
+                atoms[i].minDirection[d] = atoms[i].force[d];
+                atoms[i].lastForce_CG[d] = atoms[i].force[d];
+            }
+        }
+    }
+    else
+    {
+        beta_up = 0;
+        beta_down = 0;
+        for (i=0;i<atomNumber;i++)
+        {
+            beta_up += VecDotMul(atoms[i].force, atoms[i].force);
+            beta_down += VecDotMul(atoms[i].lastForce_CG,atoms[i].lastForce_CG);
+        }
+        beta = beta_up / beta_down;
+        printf("beta %d %f\n",step,beta);
+        for (i = 0; i<atomNumber;i++)
+        {
+            for (d=0;d<3;d++)
+            {
+                atoms[i].minDirection[d] = atoms[i].force[d] + beta*atoms[i].minDirection[d];
+                if (i==0) printf("f %d %f %f\n", d,atoms[i].minDirection[d], atoms[i].force[d]);
+                atoms[i].lastForce_CG[d] = atoms[i].force[d];
+            }
+        }
     }
 }
 
@@ -800,6 +846,7 @@ double LineMinimize()
         FindNeighbors();
         Potential(1, 0);
         lambda *= rho_min;
+        //printf("%10.20f,%10.20f\n",totalPotentialEnergy,acceptableEnergy);
     } while (acceptableEnergy <= totalPotentialEnergy);
     return startEnergy - totalPotentialEnergy;
 }
@@ -1085,6 +1132,7 @@ void VirialPairs(int i, double virial[6])
 {
     if (strcmp(potentialName, "LJ") == 0) VirialPairs_LJ(i, virial);
     else if (strcmp(potentialName, "EAM") == 0) VirialPairs_EAM(i, virial);
+    else printf("\nPotential not found. Program terminated.\n"), exit(-1);
 }
 
 
@@ -1186,16 +1234,6 @@ void Thermostat_NoseHoover(int step, double targetTemperature)
     {
         temperature = ComputeTemperature();
         xi_NoseHoover += tau2_r_NoseHoover * (temperature / targetTemperature - 1) * timeStep;
-        /*
-        if (xi_NoseHoover > 3.0)
-        {
-            xi_NoseHoover = 3.0;
-        }
-        else if (xi_NoseHoover < -3.0)
-        {
-            xi_NoseHoover = -3.0;
-        }
-        */
     }
     Friction_NoseHoover();
 }
@@ -1212,6 +1250,28 @@ void Friction_NoseHoover()
     }
 }
 
+void Thermostat_Berendsen(double targetTemperature)
+{
+    double lambda;
+    double temperature;
+    int i,d;
+    temperature = ComputeTemperature();
+    lambda = pow(1+timeStep/tau_Berendsen*(targetTemperature/temperature-1), 0.5);
+    for (i=0;i<atomNumber;i++)
+    {
+        for(d=0;d<3;d++)
+        {
+            atoms[i].v[d] *= lambda;
+        }
+    }
+}
+
+void Thermostat(int step, double targetTemperature)
+{
+    if (strcmp(thermostatStyle, "NoseHoover") == 0) Thermostat_NoseHoover(step, targetTemperature);
+    else if (strcmp(thermostatStyle, "Berendsen") == 0) Thermostat_Berendsen(targetTemperature);
+    else printf("\nThermo style not found. Program terminated.\n"), exit(-1);
+}
 
 void DynamicsProcessing(int step, double time)
 {
@@ -1220,22 +1280,22 @@ void DynamicsProcessing(int step, double time)
     if (step == 0)
     {
         printf("%d atoms are in the dynamic simulation.\n", atomNumber);
-        printf("step time temperature stress[0] stress[1] stress[2] stress[3] stress[4] stress[5]\n");
+        printf("step time temperature stress[0] stress[1] stress[2] stress[3] stress[4] stress[5] energy\n");
     }
-    if (step % 1000 == 0)
+    if (step % 100 == 0)
     {
         temperature = ComputeTemperature();
         ComputeStress(stress);
         printf("%d %f %f %f %f %f %f %f %f %f \n",
-            step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], xi_NoseHoover);
+            step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], totalPotentialEnergy+totalKineticEnergy);
         Potential(1, 0);
         Dump(step);
     }
-    Thermostat_NoseHoover(step, 300);
+    Thermostat(step, 300);
 }
 
 
-//todo list : 压强控制 共轭梯度法 径向分布函数 计算动力学温度和能量曲线 弛豫曲线 等概率球形模型
+//todo list : 压强控制 共轭梯度法 径向分布函数  弛豫曲线 等概率球形模型
 // 通过noose hoover 介绍系综原理
 // 介绍数值积分方法
 
@@ -1287,8 +1347,9 @@ int main() //
     neighborCutoff = 5.5;
 
     strcpy(potentialName, "EAM");
-    strcpy(minimizeStyle, "SD");
-    energyCriterion_min = 0.0001;
+    //InitLJ();
+    strcpy(minimizeStyle, "CG");
+    energyCriterion_min = 1e-9;
     lambda_min = 1;
     c_min = 0.1;
     rho_min = 0.5;
@@ -1297,10 +1358,12 @@ int main() //
     //-------------dynamic----------------
     srand(1);
     strcpy(dynamicStyle, "Euler");
-    totalTime = 10;
+    strcpy(thermostatStyle, "Berendsen");
+    tau_NoseHoover = 0.01;
+    tau_Berendsen = 0.01;
+    totalTime = 0;
     timeStep = 0.0001;
-    tau_NoseHoover = 0.5;
-    DistributeVelocity(1000);
+    DistributeVelocity(2000);
     strcpy(dumpName, "force.dump");
     Dynamics();
 
