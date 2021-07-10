@@ -166,7 +166,6 @@ void ConstructReducedLattice();
 void Mul_3_1(double a[3][3], double b[3], double p[3]); // matrix multiplication 3x1
 void ConstructLattice();
 void ConstructCrystal();
-void InitDump();
 void Dump(int step);
 double VecDotMul(double vec1[3], double vec2[3]); // vector dot multiplication
 void VecCroMul(double vec1[3], double vec2[3], double vecOut[3]); // vector cross multiplication
@@ -201,7 +200,7 @@ double LineMinimize();
 double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2);
 double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2);
 void DistributeVelocity(double temperature);
-void RandomSpherePoint(double r, double v[3]);
+void RandomSpherePoint(double radius, double vector[3]); 
 void ZeroMomentum();
 
 void Dynamics();
@@ -734,18 +733,25 @@ void Potential(int energyFlag, int forceFlag)
 
 void Minimize()
 {
-    double deltaEnergy;
+    double potentialEnergy_begin;
     int step;
     step = 0;
     printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
+    PBC_r();
+    FindNeighbors();
+    Potential(1, 0);
     do
     {
+        potentialEnergy_begin = totalPotentialEnergy;
         MinDirection(step);
-        deltaEnergy = LineMinimize();
+        LineMinimize();
+        PBC_r();
+        FindNeighbors();
+        Potential(1, 0);
         step += 1;
-        printf("%d %f %10.20f\n", step, totalPotentialEnergy, deltaEnergy);
-    } while (deltaEnergy > energyCriterion_min);
+        printf("%d %f %f %f\n", step, potentialEnergy_begin, totalPotentialEnergy, fabs(potentialEnergy_begin-totalPotentialEnergy));
+    } while (fabs(potentialEnergy_begin - totalPotentialEnergy) > energyCriterion_min);
     printf("---Minimization end---\n");
 }
 
@@ -766,7 +772,9 @@ void MinDirection_SD()
     Potential(0, 1);
     for (i = 0; i < atomNumber; i++)
     {
-        for (d = 0; d < 3; d++) atoms[i].minDirection[d] = atoms[i].force[d];
+        for (d = 0; d < 3; d++) 
+            {atoms[i].minDirection[d] = atoms[i].force[d];
+            }
     }
 }
 
@@ -774,6 +782,7 @@ void MinDirection_CG(int step)
 {
     int i,d;
     double beta_up, beta_down, beta;
+    double directionCheck;
     PBC_r();
     FindNeighbors();
     Potential(0, 1);
@@ -798,25 +807,77 @@ void MinDirection_CG(int step)
             beta_down += VecDotMul(atoms[i].lastForce_CG,atoms[i].lastForce_CG);
         }
         beta = beta_up / beta_down;
-        printf("beta %d %f\n",step,beta);
+        directionCheck = 0;
         for (i = 0; i<atomNumber;i++)
         {
             for (d=0;d<3;d++)
             {
                 atoms[i].minDirection[d] = atoms[i].force[d] + beta*atoms[i].minDirection[d];
-                if (i==0) printf("f %d %f %f\n", d,atoms[i].minDirection[d], atoms[i].force[d]);
                 atoms[i].lastForce_CG[d] = atoms[i].force[d];
+                directionCheck += atoms[i].minDirection[d] * atoms[i].force[d];
+            }
+        }
+        if (directionCheck < 0)
+        {
+            for (i=0;i<atomNumber;i++)
+            {
+                for(d=0;d<3;d++)
+                {
+                    atoms[i].minDirection[d] *= -1;
+                }
             }
         }
     }
 }
 
+double delta_lineMin = 0.02;
 
 double LineMinimize()
+{
+    int i,d;
+    double alpha_new, alpha_1, alpha_2; //alpha = delta_lineMin*alpha_1/(alpha_2-alpha_1)
+    alpha_1 =0;
+    alpha_2 = 0;
+    for (i=0;i<atomNumber;i++)
+    {
+        for (d=0;d<3;d++)
+        {
+            alpha_1 += atoms[i].force[d]*atoms[i].minDirection[d];
+        }
+    }
+    for (i = 0; i<atomNumber; i++)
+    {
+        for (d=0;d<3;d++)
+        {
+            atoms[i].r[d] += delta_lineMin*atoms[i].minDirection[d];
+        }
+    }
+    PBC_r();
+    FindNeighbors();
+    Potential(0,1);
+    for (i=0;i<atomNumber;i++)
+    {
+        for (d=0;d<3;d++)
+        {
+            alpha_2 += atoms[i].force[d] * atoms[i].minDirection[d];
+        }
+    }
+    alpha_new = -delta_lineMin * alpha_1 / (alpha_2-alpha_1) - delta_lineMin;
+    for (i=0;i<atomNumber;i++)
+    {
+        for(d=0;d<3;d++)
+        {
+            atoms[i].r[d] += alpha_new*atoms[i].minDirection[d];
+        }
+    }
+}
+
+double LineMinimize_Backtrace()
 {
     int i, d;
     double startEnergy, acceptableEnergy;
     double lambda;
+    int debug = 0;
 
     PBC_r();
     FindNeighbors();
@@ -845,8 +906,15 @@ double LineMinimize()
         PBC_r();
         FindNeighbors();
         Potential(1, 0);
+
+
+        Potential(0, 1);
+
+        strcpy(dumpName, "debug.dump");
+        Dump(debug);
+        debug ++;
+
         lambda *= rho_min;
-        //printf("%10.20f,%10.20f\n",totalPotentialEnergy,acceptableEnergy);
     } while (acceptableEnergy <= totalPotentialEnergy);
     return startEnergy - totalPotentialEnergy;
 }
@@ -886,16 +954,8 @@ void LaunchRun()
     if (strcmp(dynamicStyle, "Euler") == 0) 1;
     else if (strcmp(dynamicStyle, "Verlet") == 0) LaunchRun_Verlet();
     else printf("\nDynamic style not found. Program terminated.\n"), exit(-1); //fix: exit programe
-    InitDump();
 }
 
-
-void InitDump()
-{
-    FILE *file;
-    file = fopen(dumpName, "w");
-    fclose(file);
-}
 
 
 void IterRun_Euler()
@@ -955,7 +1015,14 @@ void Dump(int step) //only suitable for orthogonal box
 {
     int i, d;
     FILE *file;
-    file = fopen(dumpName, "a");
+    if (step != 0)
+    {
+        file = fopen(dumpName, "a");
+    }
+    else
+    {
+        file = fopen(dumpName, "w");
+    }
     fprintf(file, "ITEM: TIMESTEP\n");
     fprintf(file, "%d\n", step);
     fprintf(file, "ITEM: NUMBER OF ATOMS\n");
@@ -965,12 +1032,13 @@ void Dump(int step) //only suitable for orthogonal box
     {
         fprintf(file, "%f %f\n", boxStartPoint[d], boxStartPoint[d] + boxTranVecs[d][d]);
     }
-    fprintf(file, "ITEM: ATOMS id type x y z fx fy fz pe\n");
+    fprintf(file, "ITEM: ATOMS id type x y z fx fy fz pe mx my mz\n");
     {
         for (i = 0; i < atomNumber; i++)
         {
-            fprintf(file, "%d %d %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2],
-                atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy);
+            fprintf(file, "%d %d %f %f %f %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2],
+                atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy,
+                atoms[i].minDirection[0], atoms[i].minDirection[1], atoms[i].minDirection[2]);
         }
     }
     fclose(file);
@@ -1026,15 +1094,15 @@ double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2)
 }
 
 
-void RandomSpherePoint(double r, double v[3])
+void RandomSpherePoint(double radius, double vector[3])
 {
     double u, theta;
     u = (rand() / (RAND_MAX + 1.0) - 0.5) * 2;
     theta = (rand() / (RAND_MAX + 1.0)) * 2 * PI;
 
-    v[0] = sqrt(1 - u * u) * cos(theta) * r;
-    v[1] = sqrt(1 - u * u) * sin(theta) * r;
-    v[2] = u * r;
+    vector[0] = sqrt(1 - u * u) * cos(theta) * radius;
+    vector[1] = sqrt(1 - u * u) * sin(theta) * radius;
+    vector[2] = u * radius;
 }
 
 
@@ -1294,8 +1362,22 @@ void DynamicsProcessing(int step, double time)
     Thermostat(step, 300);
 }
 
-
-//todo list : 压强控制 共轭梯度法 径向分布函数  弛豫曲线 等概率球形模型
+void DisturbAtoms(double maxDistance)
+{
+    int i,d;
+    double distance;
+    double dr[3];
+    for (i=0;i<atomNumber;i++)
+    {
+        distance = (rand() / (RAND_MAX + 1.0))*maxDistance;
+        RandomSpherePoint(distance, dr);
+        for (d=0;d<3;d++)
+        {
+            atoms[i].r[d] += dr[d];
+        }
+    }
+}
+//todo list : 压强控制 径向分布函数  弛豫曲线 等概率球形模型
 // 通过noose hoover 介绍系综原理
 // 介绍数值积分方法
 
@@ -1315,6 +1397,10 @@ int main() //
     priTranVecs[0][1] = 0; priTranVecs[1][1] = latticeConstant; priTranVecs[2][1] = 0;
     priTranVecs[0][2] = 0; priTranVecs[1][2] = 0; priTranVecs[2][2] = latticeConstant;
     boxOrthogonalFlag = 1;
+    if (!boxOrthogonalFlag)
+    {
+        ComputeBoxRecTranVecs();
+    }
 
     cellAtomNumber = 2;
     cellAtomRs[0][0] = 0; cellAtomRs[0][1] = 0; cellAtomRs[0][2] = 0;
@@ -1334,13 +1420,9 @@ int main() //
 
 
     ConstructCrystal();
-    double block[3][2] = { { -0.1, 0.1}, { -0.1, 0.1}, { -0.1, 0.1} };
-    DeleteAtomsByRegion(block);
-    if (!boxOrthogonalFlag)
-    {
-        ComputeBoxRecTranVecs();
-        ComputeAtomBoxReR();
-    }
+    double block[3][2] = { { 7.8, 7.9}, { 7.8, 7.9}, { 7.8, 7.9} };
+    //DeleteAtomsByRegion(block);
+    DisturbAtoms(1.0);
 
     //process
     //--------------minimize--------------
@@ -1351,9 +1433,11 @@ int main() //
     strcpy(minimizeStyle, "CG");
     energyCriterion_min = 1e-9;
     lambda_min = 1;
-    c_min = 0.1;
+    c_min = 0.5;
     rho_min = 0.5;
     Minimize();
+    strcpy(dumpName, "min.dump");
+    Dump(0);
 
     //-------------dynamic----------------
     srand(1);
