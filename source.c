@@ -108,7 +108,6 @@ struct Atom
     double v[3], a[3];
     double m;
     double r_last_Verlet[3];
-    int crossBoundary[3];
 };
 
 
@@ -923,8 +922,9 @@ double LineMinimize_Backtrace()
 void Dynamics()
 {
     int step;
-    double time = 0;
+    double time;
     step = 0;
+    time = 0;
     LaunchRun();
     printf("\n---Dynamics start---\n");
     while (time < totalTime)
@@ -1074,17 +1074,17 @@ void DistributeVelocity(double temperature) // need to check correctness
 
 double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2)
 {
-    double P;
-    double s;
+    double sigma;
+    double x;
 
-    s = 0.0;
-    P = 0.0;
-    while (P <= randomNumber)
+    x = 0.0;
+    sigma = 0.0;
+    while (sigma <= randomNumber)
     {
-        P += MaxwellProbabilityDensity(s, prefactor1, prefactor2) * 0.01;
-        s += 0.01;
+        sigma += MaxwellProbabilityDensity(s, prefactor1, prefactor2) * 0.01;
+        x += 0.01;
     }
-    return s;
+    return x;
 }
 
 
@@ -1377,7 +1377,8 @@ void DisturbAtoms(double maxDistance)
         }
     }
 }
-//todo list : 压强控制 径向分布函数  弛豫曲线 等概率球形模型
+
+// todo list: 压强控制 径向分布函数  弛豫曲线 等概率球形模型
 // 通过noose hoover 介绍系综原理
 // 介绍数值积分方法
 
