@@ -199,7 +199,7 @@ double LineMinimize();
 double GenerateSpeed(double randomNumber, double temperature, double prefactor1, double prefactor2);
 double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2);
 void DistributeVelocity(double temperature);
-void RandomSpherePoint(double radius, double vector[3]); 
+void RandomSpherePoint(double radius, double vector[3]);
 void ZeroMomentum();
 
 void Dynamics();
@@ -710,8 +710,8 @@ void Potential_EAM(int energyFlag, int forceFlag)
                 // sum force
                 jAtomIndex = atoms[i].neighborList[j].index;
                 forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-                    + forceRho_ai)
-                    * forceRho) + forcePhi) / distance;
+                                + forceRho_ai)
+                               * forceRho) + forcePhi) / distance;
                 for (d = 0; d < 3; d++)
                 {
                     atoms[i].force[d] += forceInner * atoms[i].neighborList[j].dr[d];
@@ -749,7 +749,7 @@ void Minimize()
         FindNeighbors();
         Potential(1, 0);
         step += 1;
-        printf("%d %f %f %f\n", step, potentialEnergy_begin, totalPotentialEnergy, fabs(potentialEnergy_begin-totalPotentialEnergy));
+        printf("%d %f %f %f\n", step, potentialEnergy_begin, totalPotentialEnergy, fabs(potentialEnergy_begin - totalPotentialEnergy));
     } while (fabs(potentialEnergy_begin - totalPotentialEnergy) > energyCriterion_min);
     printf("---Minimization end---\n");
 }
@@ -771,15 +771,15 @@ void MinDirection_SD()
     Potential(0, 1);
     for (i = 0; i < atomNumber; i++)
     {
-        for (d = 0; d < 3; d++) 
-            {atoms[i].minDirection[d] = atoms[i].force[d];
-            }
+        for (d = 0; d < 3; d++)
+        {   atoms[i].minDirection[d] = atoms[i].force[d];
+        }
     }
 }
 
 void MinDirection_CG(int step)
 {
-    int i,d;
+    int i, d;
     double beta_up, beta_down, beta;
     double directionCheck;
     PBC_r();
@@ -787,9 +787,9 @@ void MinDirection_CG(int step)
     Potential(0, 1);
     if (step == 0)
     {
-        for (i=0; i<atomNumber;i++)
+        for (i = 0; i < atomNumber; i++)
         {
-            for(d=0;d<3;d++)
+            for (d = 0; d < 3; d++)
             {
                 atoms[i].minDirection[d] = atoms[i].force[d];
                 atoms[i].lastForce_CG[d] = atoms[i].force[d];
@@ -800,27 +800,27 @@ void MinDirection_CG(int step)
     {
         beta_up = 0;
         beta_down = 0;
-        for (i=0;i<atomNumber;i++)
+        for (i = 0; i < atomNumber; i++)
         {
             beta_up += VecDotMul(atoms[i].force, atoms[i].force);
-            beta_down += VecDotMul(atoms[i].lastForce_CG,atoms[i].lastForce_CG);
+            beta_down += VecDotMul(atoms[i].lastForce_CG, atoms[i].lastForce_CG);
         }
         beta = beta_up / beta_down;
         directionCheck = 0;
-        for (i = 0; i<atomNumber;i++)
+        for (i = 0; i < atomNumber; i++)
         {
-            for (d=0;d<3;d++)
+            for (d = 0; d < 3; d++)
             {
-                atoms[i].minDirection[d] = atoms[i].force[d] + beta*atoms[i].minDirection[d];
+                atoms[i].minDirection[d] = atoms[i].force[d] + beta * atoms[i].minDirection[d];
                 atoms[i].lastForce_CG[d] = atoms[i].force[d];
                 directionCheck += atoms[i].minDirection[d] * atoms[i].force[d];
             }
         }
         if (directionCheck < 0)
         {
-            for (i=0;i<atomNumber;i++)
+            for (i = 0; i < atomNumber; i++)
             {
-                for(d=0;d<3;d++)
+                for (d = 0; d < 3; d++)
                 {
                     atoms[i].minDirection[d] *= -1;
                 }
@@ -833,40 +833,40 @@ double delta_lineMin = 0.02;
 
 double LineMinimize()
 {
-    int i,d;
+    int i, d;
     double alpha_new, alpha_1, alpha_2; //alpha = delta_lineMin*alpha_1/(alpha_2-alpha_1)
-    alpha_1 =0;
+    alpha_1 = 0;
     alpha_2 = 0;
-    for (i=0;i<atomNumber;i++)
+    for (i = 0; i < atomNumber; i++)
     {
-        for (d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
-            alpha_1 += atoms[i].force[d]*atoms[i].minDirection[d];
+            alpha_1 += atoms[i].force[d] * atoms[i].minDirection[d];
         }
     }
-    for (i = 0; i<atomNumber; i++)
+    for (i = 0; i < atomNumber; i++)
     {
-        for (d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
-            atoms[i].r[d] += delta_lineMin*atoms[i].minDirection[d];
+            atoms[i].r[d] += delta_lineMin * atoms[i].minDirection[d];
         }
     }
     PBC_r();
     FindNeighbors();
-    Potential(0,1);
-    for (i=0;i<atomNumber;i++)
+    Potential(0, 1);
+    for (i = 0; i < atomNumber; i++)
     {
-        for (d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
             alpha_2 += atoms[i].force[d] * atoms[i].minDirection[d];
         }
     }
-    alpha_new = -delta_lineMin * alpha_1 / (alpha_2-alpha_1) - delta_lineMin;
-    for (i=0;i<atomNumber;i++)
+    alpha_new = -delta_lineMin * alpha_1 / (alpha_2 - alpha_1) - delta_lineMin;
+    for (i = 0; i < atomNumber; i++)
     {
-        for(d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
-            atoms[i].r[d] += alpha_new*atoms[i].minDirection[d];
+            atoms[i].r[d] += alpha_new * atoms[i].minDirection[d];
         }
     }
 }
@@ -1037,8 +1037,8 @@ void Dump(int step) //only suitable for orthogonal box
         for (i = 0; i < atomNumber; i++)
         {
             fprintf(file, "%d %d %f %f %f %f %f %f %f %f %f %f\n", atoms[i].id, atoms[i].type, atoms[i].r[0], atoms[i].r[1], atoms[i].r[2],
-                atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy,
-                atoms[i].minDirection[0], atoms[i].minDirection[1], atoms[i].minDirection[2]);
+                    atoms[i].force[0], atoms[i].force[1], atoms[i].force[2], atoms[i].potentialEnergy,
+                    atoms[i].minDirection[0], atoms[i].minDirection[1], atoms[i].minDirection[2]);
         }
     }
     fclose(file);
@@ -1081,7 +1081,7 @@ double GenerateSpeed(double randomNumber, double temperature, double prefactor1,
     sigma = 0.0;
     while (sigma <= randomNumber)
     {
-        sigma += MaxwellProbabilityDensity(s, prefactor1, prefactor2) * 0.01;
+        sigma += MaxwellProbabilityDensity(x, prefactor1, prefactor2) * 0.01;
         x += 0.01;
     }
     return x;
@@ -1096,12 +1096,12 @@ double MaxwellProbabilityDensity(double v, double prefactor1, double prefactor2)
 
 void RandomSpherePoint(double radius, double vector[3])
 {
-    double u, theta;
+    double u, phi;
     u = (rand() / (RAND_MAX + 1.0) - 0.5) * 2;
-    theta = (rand() / (RAND_MAX + 1.0)) * 2 * PI;
+    phi = (rand() / (RAND_MAX + 1.0)) * 2 * PI;
 
-    vector[0] = sqrt(1 - u * u) * cos(theta) * radius;
-    vector[1] = sqrt(1 - u * u) * sin(theta) * radius;
+    vector[0] = sqrt(1 - u * u) * cos(phi) * radius;
+    vector[1] = sqrt(1 - u * u) * sin(phi) * radius;
     vector[2] = u * radius;
 }
 
@@ -1110,25 +1110,23 @@ void ZeroMomentum()
 {
     int i, d;
     double totalMomentum[3];
-    double dv[3];
-    double totalMass;
+    double deltaMomentumPerAtom[3];
 
     totalMomentum[0] = 0, totalMomentum[1] = 0, totalMomentum[2] = 0;
-    totalMass = 0;
     for (i = 0; i < atomNumber; i++)
     {
         for (d = 0; d < 3; d++)
         {
             totalMomentum[d] += atoms[i].v[d] * atoms[i].m;
-            totalMass += atoms[i].m;
         }
     }
-    for (d = 0; d < 3; d++) dv[d] = -totalMomentum[d] / totalMass;
+
+    for (d = 0; d < 3; d++) deltaMomentumPerAtom[d] = -totalMomentum[d] / atomNumber;
     for (i = 0; i < atomNumber; i++)
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[i].v[d] += dv[d];
+            atoms[i].v[d] += deltaMomentumPerAtom[d] / atom[i].m;
         }
     }
 }
@@ -1242,8 +1240,8 @@ void VirialPairs_EAM(int i, double virial[6])
         // sum force
         jAtomIndex = atoms[i].neighborList[j].index;
         forceInner = ((((0.5 * a1_f_EAM * pow(atoms[jAtomIndex].rho_EAM, -0.5) + 2 * a2_f_EAM * atoms[jAtomIndex].rho_EAM)
-            + forceRho_ai)
-            * forceRho) + forcePhi) / distance;
+                        + forceRho_ai)
+                       * forceRho) + forcePhi) / distance;
         for (d = 0; d < 3; d++)
         {
             force[d] = forceInner * atoms[i].neighborList[j].dr[d];
@@ -1322,12 +1320,12 @@ void Thermostat_Berendsen(double targetTemperature)
 {
     double lambda;
     double temperature;
-    int i,d;
+    int i, d;
     temperature = ComputeTemperature();
-    lambda = pow(1+timeStep/tau_Berendsen*(targetTemperature/temperature-1), 0.5);
-    for (i=0;i<atomNumber;i++)
+    lambda = pow(1 + timeStep / tau_Berendsen * (targetTemperature / temperature - 1), 0.5);
+    for (i = 0; i < atomNumber; i++)
     {
-        for(d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
             atoms[i].v[d] *= lambda;
         }
@@ -1355,7 +1353,7 @@ void DynamicsProcessing(int step, double time)
         temperature = ComputeTemperature();
         ComputeStress(stress);
         printf("%d %f %f %f %f %f %f %f %f %f \n",
-            step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], totalPotentialEnergy+totalKineticEnergy);
+               step, time, temperature, stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], totalPotentialEnergy + totalKineticEnergy);
         Potential(1, 0);
         Dump(step);
     }
@@ -1364,20 +1362,60 @@ void DynamicsProcessing(int step, double time)
 
 void DisturbAtoms(double maxDistance)
 {
-    int i,d;
+    int i, d;
     double distance;
     double dr[3];
-    for (i=0;i<atomNumber;i++)
+    for (i = 0; i < atomNumber; i++)
     {
-        distance = (rand() / (RAND_MAX + 1.0))*maxDistance;
+        distance = (rand() / (RAND_MAX + 1.0)) * maxDistance;
         RandomSpherePoint(distance, dr);
-        for (d=0;d<3;d++)
+        for (d = 0; d < 3; d++)
         {
             atoms[i].r[d] += dr[d];
         }
     }
 }
 
+void MC_Metropolis(int totalSteps)
+{
+    int step;
+    struct Atom storedAtoms[MAX_ATOM_NUMBER];
+    double storedEnergy;
+    int acceptFlag;
+    storedEnergy = Potential(1,0);
+    for (step = 0; step < totalSteps; step++)
+    {
+        newEnergy = Attempt_MC(storedAtoms);
+        MetropolisCriterion(storedEnergy, newEnergy, temperature)
+    }
+}
+
+
+void MetropolisCriterion(double storedEnergy, double newEnergy, double temperature)
+{
+    int randomNumber;
+    randomNumber = rand() / (RAND_MAX + 1);
+    if randomNumber <= pow(EBASE, (storedEnergy - newEnergy) / K_B / temperature)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void Recover(struct Atom storedAtoms[MAX_ATOM_NUMBER], int storedAtomNumber)
+{
+    int n;
+    for (n = 0; n < storedAtomNumber; n++)
+    {
+        atoms[n] = storedAtoms[n];
+    }
+    atomNumber = storedAtomNumber;
+}
+
+void Attempt_MC(storedAtoms)
 // todo list: 压强控制 径向分布函数  弛豫曲线 等概率球形模型
 // 通过noose hoover 介绍系综原理
 // 介绍数值积分方法
@@ -1452,7 +1490,7 @@ int main() //
     strcpy(dumpName, "force.dump");
     Dynamics();
 
-    //PBC_r();
+    //PBC_r();、
     //FindNeighbors();
     //Potential(1, 1);
     //Dump(0);
