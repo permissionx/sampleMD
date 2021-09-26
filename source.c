@@ -724,6 +724,7 @@ void Potential_EAM(int energyFlag, int forceFlag)
 
 void Potential(int energyFlag, int forceFlag)
 {
+    FindNeighbors();
     if (strcmp(potentialName, "LJ") == 0) Potential_LJ(energyFlag, forceFlag);
     else if (strcmp(potentialName, "EAM") == 0) Potential_EAM(energyFlag, forceFlag);
     else printf("\nPotential not found. Program terminated.\n"), exit(-1);
@@ -737,16 +738,12 @@ void Minimize()
     step = 0;
     printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
-    PBC_r();
-    FindNeighbors();
     Potential(1, 0);
     do
     {
         potentialEnergy_begin = totalPotentialEnergy;
         MinDirection(step);
         LineMinimize();
-        PBC_r();
-        FindNeighbors();
         Potential(1, 0);
         step += 1;
         printf("%d %f %f %f\n", step, potentialEnergy_begin, totalPotentialEnergy, fabs(potentialEnergy_begin - totalPotentialEnergy));
@@ -766,8 +763,6 @@ void MinDirection(int step)
 void MinDirection_SD()
 {
     int i, d;
-    PBC_r();
-    FindNeighbors();
     Potential(0, 1);
     for (i = 0; i < atomNumber; i++)
     {
@@ -775,18 +770,16 @@ void MinDirection_SD()
         {   atoms[i].minDirection[d] = atoms[i].force[d];
         }
     }
-}
+}   
 
 void MinDirection_CG(int step)
 {
     int i, d;
     double beta_up, beta_down, beta;
     double directionCheck;
-    PBC_r();
-    FindNeighbors();
-    Potential(0, 1);
     if (step == 0)
-    {
+    {    Potential(0, 1);
+
         for (i = 0; i < atomNumber; i++)
         {
             for (d = 0; d < 3; d++)
@@ -852,7 +845,6 @@ double LineMinimize()
         }
     }
     PBC_r();
-    FindNeighbors();
     Potential(0, 1);
     for (i = 0; i < atomNumber; i++)
     {
@@ -869,8 +861,10 @@ double LineMinimize()
             atoms[i].r[d] += alpha_new * atoms[i].minDirection[d];
         }
     }
+    PBC_r();
 }
 
+/*
 double LineMinimize_Backtrace()
 {
     int i, d;
@@ -878,8 +872,6 @@ double LineMinimize_Backtrace()
     double lambda;
     int debug = 0;
 
-    PBC_r();
-    FindNeighbors();
     Potential(1, 0);
     startEnergy = totalPotentialEnergy;
     lambda = lambda_min;
@@ -902,12 +894,7 @@ double LineMinimize_Backtrace()
                 acceptableEnergy -= atoms[i].minDirection[d] * atoms[i].minDirection[d] * lambda * c_min;
             }
         }
-        PBC_r();
-        FindNeighbors();
-        Potential(1, 0);
-
-
-        Potential(0, 1);
+        Potential(1, 1);
 
         strcpy(dumpName, "debug.dump");
         Dump(debug);
@@ -917,7 +904,7 @@ double LineMinimize_Backtrace()
     } while (acceptableEnergy <= totalPotentialEnergy);
     return startEnergy - totalPotentialEnergy;
 }
-
+*/
 
 void Dynamics()
 {
@@ -929,8 +916,6 @@ void Dynamics()
     printf("\n---Dynamics start---\n");
     while (time < totalTime)
     {
-        PBC_r();
-        FindNeighbors(); //neighbour deley to accelerate
         Potential(0, 1);
         DynamicsProcessing(step, time);
         IterRun();
@@ -946,6 +931,7 @@ void IterRun()
     if (strcmp(dynamicStyle, "Euler") == 0) IterRun_Euler();
     else if (strcmp(dynamicStyle, "Verlet") == 0) IterRun_Verlet();
     else printf("\nDynamic style not found. Program terminated.\n"), exit(-1);
+    PBC_r();
 }
 
 
@@ -954,6 +940,7 @@ void LaunchRun()
     if (strcmp(dynamicStyle, "Euler") == 0) 1;
     else if (strcmp(dynamicStyle, "Verlet") == 0) LaunchRun_Verlet();
     else printf("\nDynamic style not found. Program terminated.\n"), exit(-1); //fix: exit programe
+    PBC_r();
 }
 
 
@@ -996,8 +983,6 @@ void LaunchRun_Verlet()
     int i, d;
     time_2_Verlet = timeStep * timeStep;
     time_m_2_Verlet = timeStep * 2.0;
-    PBC_r();
-    FindNeighbors();
     Potential(0, 1);
     for (i = 0; i < atomNumber; i++)
     {
@@ -1474,7 +1459,7 @@ int main() //
     lambda_min = 1;
     c_min = 0.5;
     rho_min = 0.5;
-    Minimize();
+       
     strcpy(dumpName, "min.dump");
     Dump(0);
 
@@ -1490,7 +1475,6 @@ int main() //
     strcpy(dumpName, "force.dump");
     Dynamics();
 
-    //PBC_r();、
     //FindNeighbors();
     //Potential(1, 1);
     //Dump(0);
