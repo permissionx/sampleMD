@@ -4,11 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+/*constant*/
 #define K_B 8.61733326E-5
 #define PI 3.1415926
 #define EBASE 2.71828182846
 
-/*constant*/
 #define MAX_LATTICE_NUMBER 2000
 #define MAX_ATOM_NUMBER 20000
 #define MAX_CELL_ATOM_NUMBER 10
@@ -316,6 +316,29 @@ void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3])
         }
     }
 }
+
+void solveInverseMatrix(double mat[3][3], double invMat[3][3])
+{
+    double det;
+    int i, j;
+    det = mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]) -
+          mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]) +
+          mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]);
+    if (fabs(det) < 1e-10)
+    {
+        printf("Singular matrix!\n");
+        exit(1);
+    }
+    for (i = 0; i < 3; i++)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            invMat[i][j] = (mat[(i + 1) % 3][(j + 1) % 3] * mat[(i + 2) % 3][(j + 2) % 3] -
+                            mat[(i + 1) % 3][(j + 2) % 3] * mat[(i + 2) % 3][(j + 1) % 3]) / det;
+        }
+    }
+}
+
 
 void MatInv(double matIn[3][3], double matOut[3][3])
 {
@@ -1111,7 +1134,7 @@ void ZeroMomentum()
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[i].v[d] += deltaMomentumPerAtom[d] / atom[i].m;
+            atoms[i].v[d] += deltaMomentumPerAtom[d] / atoms[i].m;
         }
     }
 }
@@ -1361,6 +1384,7 @@ void DisturbAtoms(double maxDistance)
     }
 }
 
+/*
 void MC_Metropolis(int totalSteps)
 {
     int step;
@@ -1404,7 +1428,7 @@ void Attempt_MC(storedAtoms)
 // todo list: 压强控制 径向分布函数  弛豫曲线 等概率球形模型
 // 通过noose hoover 介绍系综原理
 // 介绍数值积分方法
-
+*/
 
 
 /*main*/
