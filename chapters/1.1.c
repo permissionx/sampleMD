@@ -10,7 +10,6 @@
 /*classes*/
 struct LatticePoint
 {
-    int id;
     int reR[3];
 };
 
@@ -20,7 +19,7 @@ int latticePointNumber;
 int latticeSizes[3][2];
 
 /*function declarations*/
-void ConstructReducedLattice();     
+void ConstructReducedLattice();
 
 /*functions*/
 void ConstructReducedLattice()
@@ -33,7 +32,6 @@ void ConstructReducedLattice()
         {
             for (k = latticeSizes[2][0]; k < latticeSizes[2][1]; k++)
             {
-                latticePoints[n].id = n;
                 latticePoints[n].reR[0] = i;
                 latticePoints[n].reR[1] = j;
                 latticePoints[n].reR[2] = k;
@@ -47,7 +45,7 @@ void ConstructReducedLattice()
 /*main*/
 int main()
 {
-    /*parameter*/
+    /*parameters*/
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 3;
     latticeSizes[1][0] = 0;
@@ -59,10 +57,10 @@ int main()
     ConstructReducedLattice();
 
     /*output*/
-    int i;
-    for (i = 0; i < latticePointNumber; i++)
+    int n;
+    for (n = 0; n < latticePointNumber; n++)
     {
-        printf("%d %d %d\n", latticePoints[i].reR[0], llsatticePoints[i].reR[1], latticePoints[i].reR[2]);
+        printf("%d %d %d\n", latticePoints[n].reR[0], latticePoints[n].reR[1], latticePoints[n].reR[2]);
     }
 
     return 0;

@@ -22,9 +22,8 @@ int latticeSizes[3][2];
 double priTranVecs[3][3]; // primitive translation vectors
 
 /* function declarations */
-void ConstructReducedLattice();     
+void ConstructReducedLattice();
 void ConstructLattice();
-
 
 /* functions */
 void ConstructReducedLattice()
@@ -48,10 +47,9 @@ void ConstructReducedLattice()
     latticePointNumber = n;
 }
 
-
 void ConstructLattice()
 {
-    int n,d;
+    int n, d;
     for (n = 0; n < latticePointNumber; n++)
     {
         for (d = 0; d < 3; d++)
@@ -60,7 +58,6 @@ void ConstructLattice()
         }
     }
 }
-
 
 /*main*/
 int main()
@@ -73,21 +70,56 @@ int main()
     latticeSizes[2][0] = 0;
     latticeSizes[2][1] = 3;
 
-    priTranVecs[0][0]=1; priTranVecs[1][0]=0; priTranVecs[2][0]=0;
-    priTranVecs[0][1]=0; priTranVecs[1][1]=1; priTranVecs[2][1]=0;
-    priTranVecs[0][2]=0; priTranVecs[1][2]=0; priTranVecs[2][2]=1;
+    priTranVecs[0][0] = 1;
+    priTranVecs[1][0] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[0][1] = 0;
+    priTranVecs[1][1] = 1;
+    priTranVecs[2][1] = 0;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][2] = 1;
 
-
-    /*processing*/
+    /*processings*/
     ConstructReducedLattice();
     ConstructLattice();
 
     /*output*/
-    int i;
-    for (i = 0; i < latticePointNumber; i++)
+    int n;
+    for (n = 0; n < latticePointNumber; n++)
     {
-        printf("%f %f %f\n", latticePoints[i].r[0], latticePoints[i].r[1], latticePoints[i].r[2]);
+        printf("%f %f %f\n", latticePoints[n].r[0], latticePoints[n].r[1], latticePoints[n].r[2]);
     }
 
     return 0;
 }
+
+/*output
+0.000000 0.000000 0.000000
+0.000000 0.000000 1.000000
+0.000000 0.000000 2.000000
+0.000000 1.000000 0.000000
+0.000000 1.000000 1.000000
+0.000000 1.000000 2.000000
+0.000000 2.000000 0.000000
+0.000000 2.000000 1.000000
+0.000000 2.000000 2.000000
+1.000000 0.000000 0.000000
+1.000000 0.000000 1.000000
+1.000000 0.000000 2.000000
+1.000000 1.000000 0.000000
+1.000000 1.000000 1.000000
+1.000000 1.000000 2.000000
+1.000000 2.000000 0.000000
+1.000000 2.000000 1.000000
+1.000000 2.000000 2.000000
+2.000000 0.000000 0.000000
+2.000000 0.000000 1.000000
+2.000000 0.000000 2.000000
+2.000000 1.000000 0.000000
+2.000000 1.000000 1.000000
+2.000000 1.000000 2.000000
+2.000000 2.000000 0.000000
+2.000000 2.000000 1.000000
+2.000000 2.000000 2.000000
+*/
