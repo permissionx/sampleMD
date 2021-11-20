@@ -10,7 +10,6 @@
 /* classes */
 struct LatticePoint
 {
-    int id;
     int reR[3];
     double r[3];
 };
@@ -36,7 +35,6 @@ void ConstructReducedLattice()
         {
             for (k = latticeSizes[2][0]; k < latticeSizes[2][1]; k++)
             {
-                latticePoints[n].id = n;
                 latticePoints[n].reR[0] = i;
                 latticePoints[n].reR[1] = j;
                 latticePoints[n].reR[2] = k;
@@ -59,10 +57,10 @@ void ConstructLattice()
     }
 }
 
-/*main*/
+/* main */
 int main()
 {
-    /*parameter*/
+    /* parameter */
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 3;
     latticeSizes[1][0] = 0;
@@ -80,11 +78,11 @@ int main()
     priTranVecs[1][2] = 0;
     priTranVecs[2][2] = 1;
 
-    /*processings*/
+    /* processings */
     ConstructReducedLattice();
     ConstructLattice();
 
-    /*output*/
+    /* output */
     int n;
     for (n = 0; n < latticePointNumber; n++)
     {
@@ -94,7 +92,7 @@ int main()
     return 0;
 }
 
-/*output
+/* output
 0.000000 0.000000 0.000000
 0.000000 0.000000 1.000000
 0.000000 0.000000 2.000000

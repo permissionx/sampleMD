@@ -12,7 +12,6 @@
 /* classes */
 struct LatticePoint
 {
-    int id;
     int reR[3];
     double r[3];
 };
@@ -51,7 +50,6 @@ void ConstructReducedLattice()
         {
             for (k = latticeSizes[2][0]; k < latticeSizes[2][1]; k++)
             {
-                latticePoints[n].id = n;
                 latticePoints[n].reR[0] = i;
                 latticePoints[n].reR[1] = j;
                 latticePoints[n].reR[2] = k;
