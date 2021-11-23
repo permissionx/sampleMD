@@ -38,7 +38,7 @@ double recPriTranVecs[3][3];
 void ConstructReducedLattice();
 void ConstructLattice();
 void ConstructCrystal();
-void Dump(char fileName[20]);
+void Dump_xyz(char fileName[20]);
 double VecDotMul(double vec1[3], double vec2[3]);
 void VecCroMul(double vec1[3], double vec2[3], double vecOut[3]);
 void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3]);
@@ -99,7 +99,7 @@ void ConstructCrystal()
 }
 
 
-void Dump(char fileName[20])
+void Dump_xyz(char fileName[20])
 {
     int n;
     FILE *fp;

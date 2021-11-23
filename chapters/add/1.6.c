@@ -38,7 +38,6 @@ int cellAtomTypes[MAX_CELL_ATOM_NUMBER];
 void ConstructReducedLattice();
 void ConstructLattice();
 void ConstructCrystal();
-void Dump_xyz(char fileName[20]);
 
 /* functions */
 void ConstructReducedLattice()
@@ -94,30 +93,11 @@ void ConstructCrystal()
     atomNumber = nAtom;
 }
 
-
-void Dump_xyz(char fileName[20])
-{
-    int n;
-    FILE *fp;
-    fp = fopen(fileName, "w");
-    fprintf(fp, "%d\n", atomNumber);
-    fprintf(fp, "id type x y z\n");
-    for (n = 0; n < atomNumber; n++)
-    {
-        fprintf(fp, "%d %d %f %f %f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
-    }
-    fclose(fp);
-}
-
-
-
-
-
 /*main*/
 int main()
 {
     /*parameters*/
-    double latticeConstant = 5.642; //unit: angstrom
+    double latticeConstant = 3.14; //unit: angstrom
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 3;
     latticeSizes[1][0] = 0;
@@ -135,40 +115,15 @@ int main()
     priTranVecs[2][1] = 0;
     priTranVecs[2][2] = latticeConstant;
 
-    cellAtomNumber = 8;
+    cellAtomNumber = 2;
     cellAtomRs[0][0] = 0;
     cellAtomRs[0][1] = 0;
     cellAtomRs[0][2] = 0;
-    cellAtomRs[1][0] = 0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
     cellAtomRs[1][1] = 0.5 * latticeConstant;
     cellAtomRs[1][2] = 0.5 * latticeConstant;
-    cellAtomRs[2][0] = 0.5 * latticeConstant;
-    cellAtomRs[2][1] = 0;
-    cellAtomRs[2][2] = 0.5 * latticeConstant;
-    cellAtomRs[3][0] = 0.5 * latticeConstant;
-    cellAtomRs[3][1] = 0.5 * latticeConstant;
-    cellAtomRs[3][2] = 0;
-    cellAtomRs[4][0] = 0 + 0.5 * latticeConstant;
-    cellAtomRs[4][1] = 0;
-    cellAtomRs[4][2] = 0;
-    cellAtomRs[5][0] = 0 + 0.5 * latticeConstant;
-    cellAtomRs[5][1] = 0.5 * latticeConstant;
-    cellAtomRs[5][2] = 0.5 * latticeConstant;
-    cellAtomRs[6][0] = 0.5 * latticeConstant + 0.5 * latticeConstant;
-    cellAtomRs[6][1] = 0;
-    cellAtomRs[6][2] = 0.5 * latticeConstant;
-    cellAtomRs[7][0] = 0.5 * latticeConstant + 0.5 * latticeConstant;
-    cellAtomRs[7][1] = 0.5 * latticeConstant;
-    cellAtomRs[7][2] = 0;
-
     cellAtomTypes[0] = 1;
     cellAtomTypes[1] = 1;
-    cellAtomTypes[2] = 1;
-    cellAtomTypes[3] = 1;
-    cellAtomTypes[4] = 2;
-    cellAtomTypes[5] = 2;
-    cellAtomTypes[6] = 2;
-    cellAtomTypes[7] = 2;
 
     /*processing*/
     ConstructReducedLattice();
@@ -176,5 +131,68 @@ int main()
     ConstructCrystal();
 
     /*output*/
-    Dump_xyz("NaCl.xyz");
+    int n;
+    for (n = 0; n < atomNumber; n++)
+    {
+        printf("%d %d %f %f %f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
+    }
+
+    return 0;
 }
+
+/* output
+1 1 0.000000 0.000000 0.000000
+2 1 1.570000 1.570000 1.570000
+3 1 0.000000 0.000000 3.140000
+4 1 1.570000 1.570000 4.710000
+5 1 0.000000 0.000000 6.280000
+6 1 1.570000 1.570000 7.850000
+7 1 0.000000 3.140000 0.000000
+8 1 1.570000 4.710000 1.570000
+9 1 0.000000 3.140000 3.140000
+10 1 1.570000 4.710000 4.710000
+11 1 0.000000 3.140000 6.280000
+12 1 1.570000 4.710000 7.850000
+13 1 0.000000 6.280000 0.000000
+14 1 1.570000 7.850000 1.570000
+15 1 0.000000 6.280000 3.140000
+16 1 1.570000 7.850000 4.710000
+17 1 0.000000 6.280000 6.280000
+18 1 1.570000 7.850000 7.850000
+19 1 3.140000 0.000000 0.000000
+20 1 4.710000 1.570000 1.570000
+21 1 3.140000 0.000000 3.140000
+22 1 4.710000 1.570000 4.710000
+23 1 3.140000 0.000000 6.280000
+24 1 4.710000 1.570000 7.850000
+25 1 3.140000 3.140000 0.000000
+26 1 4.710000 4.710000 1.570000
+27 1 3.140000 3.140000 3.140000
+28 1 4.710000 4.710000 4.710000
+29 1 3.140000 3.140000 6.280000
+30 1 4.710000 4.710000 7.850000
+31 1 3.140000 6.280000 0.000000
+32 1 4.710000 7.850000 1.570000
+33 1 3.140000 6.280000 3.140000
+34 1 4.710000 7.850000 4.710000
+35 1 3.140000 6.280000 6.280000
+36 1 4.710000 7.850000 7.850000
+37 1 6.280000 0.000000 0.000000
+38 1 7.850000 1.570000 1.570000
+39 1 6.280000 0.000000 3.140000
+40 1 7.850000 1.570000 4.710000
+41 1 6.280000 0.000000 6.280000
+42 1 7.850000 1.570000 7.850000
+43 1 6.280000 3.140000 0.000000
+44 1 7.850000 4.710000 1.570000
+45 1 6.280000 3.140000 3.140000
+46 1 7.850000 4.710000 4.710000
+47 1 6.280000 3.140000 6.280000
+48 1 7.850000 4.710000 7.850000
+49 1 6.280000 6.280000 0.000000
+50 1 7.850000 7.850000 1.570000
+51 1 6.280000 6.280000 3.140000
+52 1 7.850000 7.850000 4.710000
+53 1 6.280000 6.280000 6.280000
+54 1 7.850000 7.850000 7.850000
+*/
