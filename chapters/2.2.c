@@ -37,7 +37,7 @@ int cellAtomTypes[MAX_CELL_ATOM_NUMBER];
 double recPriTranVecs[3][3];
 
 double boxStartPoint[3];
-double boxTranVecs[3][3]; // box translation vectors
+double boxTranVecs[3][3];    // box translation vectors
 double boxRecTranVecs[3][3]; //box reciprocal translation vectors
 
 /* function declarations */
@@ -163,31 +163,61 @@ void ComputeAtomReR()
     }
 }
 
-
-void ComputetAtomBoxReR()
+void ComputeAtomBoxReR()
 {
     int n, d;
     for (n = 0; n < atomNumber; n++)
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[n].boxReR[d] = boxRecTranVecs[d][0] * (atoms[n].r[0] - boxStartPoint[0]) + \
-                                 boxRecTranVecs[d][1] * (atoms[n].r[1] - boxStartPoint[1])+ \
+            atoms[n].boxReR[d] = boxRecTranVecs[d][0] * (atoms[n].r[0] - boxStartPoint[0]) +
+                                 boxRecTranVecs[d][1] * (atoms[n].r[1] - boxStartPoint[1]) +
                                  boxRecTranVecs[d][2] * (atoms[n].r[2] - boxStartPoint[2]);
+            if (atoms[n].boxReR[d] < -1 || atoms[n].boxReR[d] >= 2)
+            {
+                printf("Lost atom %d!\n", atoms[n].id);
+                exit(1);
+            }
         }
     }
 }
 
+
 void PBC_r()
 {
-
+    int n, d;
+    int isDisplaced;
+    for (n = 0; n < atomNumber; n++)
+    {
+        isDisplaced = 0;
+        for (d = 0; d < 3; d++)
+        {
+            if (atoms[n].boxReR[d] < 0)
+            {
+                atoms[n].boxReR[d] += 1;
+                isDisplaced = 1;
+            }
+            else if (atoms[n].boxReR[d] >= 1)
+            {
+                atoms[n].boxReR[d] -= 1;
+                isDisplaced = 1;
+            }
+        }
+        if (isDisplaced)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[n].r[d] = boxTranVecs[0][d] * atoms[n].boxReR[0] + boxTranVecs[1][d] * atoms[n].boxReR[1] + boxTranVecs[2][d] * atoms[n].boxReR[2] + boxStartPoint[d];
+            }
+        }
+    }
 }
 
 /* main */
 int main()
 {
     /* parameters */
-    double latticeConstant = 3.14; //unit: angstrom
+    double latticeConstant = 5; //unit: angstrom
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 4;
     latticeSizes[1][0] = 0;
@@ -195,119 +225,50 @@ int main()
     latticeSizes[2][0] = 0;
     latticeSizes[2][1] = 4;
 
-    priTranVecs[0][0] = 0.5 * latticeConstant;
-    priTranVecs[0][1] = 0.5 * latticeConstant;
-    priTranVecs[0][2] = -0.5 * latticeConstant;
-    priTranVecs[1][0] = 0.5 * latticeConstant;
-    priTranVecs[1][1] = -0.5 * latticeConstant;
-    priTranVecs[1][2] = 0.5 * latticeConstant;
-    priTranVecs[2][0] = -0.5 * latticeConstant;
-    priTranVecs[2][1] = 0.5 * latticeConstant;
-    priTranVecs[2][2] = 0.5 * latticeConstant;
+    priTranVecs[0][0] = latticeConstant;
+    priTranVecs[0][1] = 0;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][0] = 0;
+    priTranVecs[1][1] = latticeConstant;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[2][1] = 0;
+    priTranVecs[2][2] = latticeConstant;
 
-    cellAtomNumber = 1;
+    cellAtomNumber = 2;
     cellAtomRs[0][0] = 0;
     cellAtomRs[0][1] = 0;
     cellAtomRs[0][2] = 0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant;
+    cellAtomRs[1][2] = 0.5 * latticeConstant;
     cellAtomTypes[0] = 1;
+    cellAtomTypes[1] = 1;
 
     boxStartPoint[0] = 0;
     boxStartPoint[1] = 0;
     boxStartPoint[2] = 0;
 
-    boxTranVecs[0][0] = 0.5 * latticeConstant * 4;
-    boxTranVecs[0][1] = 0.5 * latticeConstant * 4;
-    boxTranVecs[0][2] = -0.5 * latticeConstant * 4;
-    boxTranVecs[1][0] = 0.5 * latticeConstant * 4;
-    boxTranVecs[1][1] = -0.5 * latticeConstant * 4;
-    boxTranVecs[1][2] = 0.5 * latticeConstant * 4;
-    boxTranVecs[2][0] = -0.5 * latticeConstant * 4;
-    boxTranVecs[2][1] = 0.5 * latticeConstant * 4;
-    boxTranVecs[2][2] = 0.5 * latticeConstant * 4;
+    boxTranVecs[0][0] = latticeConstant * 4;
+    boxTranVecs[0][1] = 0;
+    boxTranVecs[0][2] = 0;
+    boxTranVecs[1][0] = 0;
+    boxTranVecs[1][1] = latticeConstant * 4;
+    boxTranVecs[1][2] = 0;
+    boxTranVecs[2][0] = 0;
+    boxTranVecs[2][1] = 0;
+    boxTranVecs[2][2] = latticeConstant * 4;
 
     /* processing */
     ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-    ComputetAtomBoxReR();
-    
 
-    /* output */
-    int n, d;
-    for (n = 0; n < atomNumber; n++)
-    {
-        for (d = 0; d < 3; d++)
-        {
-            printf("%f ", atoms[n].boxReR[d]);
-        }
-        printf("\n");
-    }
+    printf("original x position of atom0: %f\n",atoms[0].r[0]);
+    atoms[0].r[0] -= 1;
+    printf("x position of shifted atom0 WITHOUT PBC: %f\n",atoms[0].r[0]);
+    ComputeAtomBoxReR();
+    PBC_r();
+    printf("x position of shifted atom0 WITH PBC: %f\n",atoms[0].r[0]);
 }
-
-/* output
-0.000000 0.000000 0.000000 
-0.000000 0.000000 0.250000 
-0.000000 0.000000 0.500000 
-0.000000 0.000000 0.750000 
-0.000000 0.250000 0.000000 
-0.000000 0.250000 0.250000 
-0.000000 0.250000 0.500000 
-0.000000 0.250000 0.750000 
-0.000000 0.500000 0.000000 
-0.000000 0.500000 0.250000 
-0.000000 0.500000 0.500000 
-0.000000 0.500000 0.750000 
-0.000000 0.750000 0.000000 
-0.000000 0.750000 0.250000 
-0.000000 0.750000 0.500000 
-0.000000 0.750000 0.750000 
-0.250000 0.000000 0.000000 
-0.250000 0.000000 0.250000 
-0.250000 0.000000 0.500000 
-0.250000 0.000000 0.750000 
-0.250000 0.250000 0.000000 
-0.250000 0.250000 0.250000 
-0.250000 0.250000 0.500000 
-0.250000 0.250000 0.750000 
-0.250000 0.500000 0.000000 
-0.250000 0.500000 0.250000 
-0.250000 0.500000 0.500000 
-0.250000 0.500000 0.750000 
-0.250000 0.750000 0.000000 
-0.250000 0.750000 0.250000 
-0.250000 0.750000 0.500000 
-0.250000 0.750000 0.750000 
-0.500000 0.000000 0.000000 
-0.500000 0.000000 0.250000 
-0.500000 0.000000 0.500000 
-0.500000 0.000000 0.750000 
-0.500000 0.250000 0.000000 
-0.500000 0.250000 0.250000 
-0.500000 0.250000 0.500000 
-0.500000 0.250000 0.750000 
-0.500000 0.500000 0.000000 
-0.500000 0.500000 0.250000 
-0.500000 0.500000 0.500000 
-0.500000 0.500000 0.750000 
-0.500000 0.750000 0.000000 
-0.500000 0.750000 0.250000 
-0.500000 0.750000 0.500000 
-0.500000 0.750000 0.750000 
-0.750000 0.000000 0.000000 
-0.750000 0.000000 0.250000 
-0.750000 0.000000 0.500000 
-0.750000 0.000000 0.750000 
-0.750000 0.250000 0.000000 
-0.750000 0.250000 0.250000 
-0.750000 0.250000 0.500000 
-0.750000 0.250000 0.750000 
-0.750000 0.500000 0.000000 
-0.750000 0.500000 0.250000 
-0.750000 0.500000 0.500000 
-0.750000 0.500000 0.750000 
-0.750000 0.750000 0.000000 
-0.750000 0.750000 0.250000 
-0.750000 0.750000 0.500000 
-0.750000 0.750000 0.750000 
-*/
