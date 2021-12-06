@@ -5,9 +5,10 @@
 #include <stdlib.h>
 
 /* constants */
-#define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 100000  //maximum number of atoms
-#define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
+#define MAX_LATTICE_NUMBER 2000  // maximum number of lattices
+#define MAX_ATOM_NUMBER 20000   // maximum number of atoms
+#define MAX_CELL_ATOM_NUMBER 10  // maximum number of atoms in a cell
+#define MAX_NEIGHBOR_NUMBER 2000 // maximum number of neighbors
 
 /* classes */
 struct LatticePoint
@@ -16,12 +17,21 @@ struct LatticePoint
     double r[3];
 };
 
+struct AtomNeighbor
+{
+    int index;
+    double distance;
+    double dr[3];  // from atom to neighbor
+};
+
 struct Atom
 {
     int id, type;
     double r[3];
     double reR[3];
     double boxReR[3];
+    int neighborNumber;
+    struct AtomNeighbor neighbors[MAX_NEIGHBOR_NUMBER];
 };
 
 /* global variables */
@@ -38,8 +48,10 @@ double recPriTranVecs[3][3];
 
 double boxStartPoint[3];
 double boxTranVecs[3][3];    // box translation vectors
-double boxRecTranVecs[3][3]; //box reciprocal translation vectors
+double boxRecTranVecs[3][3]; // box reciprocal translation vectors
 int boxPerpendicular;
+
+double neighborCutoff;
 
 /* function declarations */
 void ConstructReducedLattice();
@@ -58,12 +70,17 @@ void PBC_r_general();
 void PBC_dr_general(int i, int j, double dr[3]);
 void PBC_r_vertical();
 void PBC_dr_vertical(int i, int j, double dr[3]);
+void ConstructStdCrystal_BCC(double latticeConstant, int length);
+void ConstructStdCrystal_FCC(double latticeConstant, int length);
+void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep);
 
 void DeleteAtomByIndex(int index);
 void DeleteAtomsByShpereRegion(double center[3], double radius);
 void DeleteAtomsByBlockRegion(double block[3][2]);
 void InsertAtom(double r[3], int type);
 void EdgeDislocation_100(double latticeConstant);
+
+void ConstructNeighborList();
 
 /* functions */
 void ConstructReducedLattice()
@@ -308,6 +325,145 @@ void PBC_dr(int i, int j, double dr[3])
     }
 }
 
+void ConstructStdCrystal_BCC(double latticeConstant, int length)
+{
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = length;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = length;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = length;
+
+    priTranVecs[0][0] = latticeConstant;
+    priTranVecs[0][1] = 0;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][0] = 0;
+    priTranVecs[1][1] = latticeConstant;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[2][1] = 0;
+    priTranVecs[2][2] = latticeConstant;
+
+    cellAtomNumber = 2;
+    cellAtomRs[0][0] = 0;
+    cellAtomRs[0][1] = 0;
+    cellAtomRs[0][2] = 0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant;
+    cellAtomRs[1][2] = 0.5 * latticeConstant;
+    cellAtomTypes[0] = 1;
+    cellAtomTypes[1] = 1;
+
+    boxStartPoint[0] = 0;
+    boxStartPoint[1] = 0;
+    boxStartPoint[2] = 0;
+
+    boxTranVecs[0][0] = latticeConstant * length;
+    boxTranVecs[0][1] = 0;
+    boxTranVecs[0][2] = 0;
+    boxTranVecs[1][0] = 0;
+    boxTranVecs[1][1] = latticeConstant * length;
+    boxTranVecs[1][2] = 0;
+    boxTranVecs[2][0] = 0;
+    boxTranVecs[2][1] = 0;
+    boxTranVecs[2][2] = latticeConstant * length;
+    boxPerpendicular = 1;
+
+    ConstructReducedLattice();
+    ConstructLattice();
+    ConstructCrystal();
+}
+
+void ConstructStdCrystal_FCC(double latticeConstant, int length)
+{
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = length;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = length;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = length;
+
+    priTranVecs[0][0] = latticeConstant;
+    priTranVecs[0][1] = 0;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][0] = 0;
+    priTranVecs[1][1] = latticeConstant;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[2][1] = 0;
+    priTranVecs[2][2] = latticeConstant;
+
+    cellAtomNumber = 4;
+    cellAtomRs[0][0] = 0.0;
+    cellAtomRs[0][1] = 0.0;
+    cellAtomRs[0][2] = 0.0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant;
+    cellAtomRs[1][2] = 0.0;
+    cellAtomRs[2][0] = 0.5 * latticeConstant;
+    cellAtomRs[2][1] = 0.0;
+    cellAtomRs[2][2] = 0.5 * latticeConstant;
+    cellAtomRs[3][0] = 0.0;
+    cellAtomRs[3][1] = 0.5 * latticeConstant;
+    cellAtomRs[3][2] = 0.5 * latticeConstant;
+    cellAtomTypes[0] = 1;
+    cellAtomTypes[1] = 1;
+    cellAtomTypes[2] = 1;
+    cellAtomTypes[3] = 1;
+
+    boxStartPoint[0] = 0;
+    boxStartPoint[1] = 0;
+    boxStartPoint[2] = 0;
+
+    boxTranVecs[0][0] = latticeConstant * length;
+    boxTranVecs[0][1] = 0;
+    boxTranVecs[0][2] = 0;
+    boxTranVecs[1][0] = 0;
+    boxTranVecs[1][1] = latticeConstant * length;
+    boxTranVecs[1][2] = 0;
+    boxTranVecs[2][0] = 0;
+    boxTranVecs[2][1] = 0;
+    boxTranVecs[2][2] = latticeConstant * length;
+    boxPerpendicular = 1;
+
+    ConstructReducedLattice();
+    ConstructLattice();
+    ConstructCrystal();
+}
+
+void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
+{
+    int n;
+    FILE *fp;
+    if (boxPerpendicular != 1)
+    {
+        printf("Error: Dump_lammpstrj() only works in cuboid.\n");
+        exit(1);
+    }
+    if (isNewFile)
+    {
+        fp = fopen(fileName, "w");
+    }
+    else
+    {
+        fp = fopen(fileName, "a");
+    }
+    fprintf(fp, "ITEM: TIMESTEP\n");
+    fprintf(fp, "%d\n", nstep);
+    fprintf(fp, "ITEM: NUMBER OF ATOMS\n");
+    fprintf(fp, "%d\n", atomNumber);
+    fprintf(fp, "ITEM: BOX BOUNDS pp pp pp\n");
+    fprintf(fp, "%f %f\n", boxStartPoint[0], boxStartPoint[0] + boxTranVecs[0][0]);
+    fprintf(fp, "%f %f\n", boxStartPoint[1], boxStartPoint[1] + boxTranVecs[1][1]);
+    fprintf(fp, "%f %f\n", boxStartPoint[2], boxStartPoint[2] + boxTranVecs[2][2]);
+    fprintf(fp, "ITEM: ATOMS id type x y z\n");
+    for (n = 0; n < atomNumber; n++)
+    {
+        fprintf(fp, "%d %d %f %f %f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
+    }
+    fclose(fp);
+}
+
 void DeleteAtomByIndex(int index)
 {
     int i;
@@ -376,7 +532,7 @@ void EdgeDislocation_100(double latticeConstant)
         {boxStartPoint[2] + boxTranVecs[2][2] / 2 - 0.1, boxStartPoint[2] + boxTranVecs[2][2] + 0.1}};
 
     DeleteAtomsByBlockRegion(deleteBlock);
-    //shift atoms
+    // shift atoms
     for (n = 0; n < atomNumber; n++)
     {
         if (atoms[n].r[2] > boxStartPoint[2] + boxTranVecs[2][2] / 2 - 0.1)
@@ -386,57 +542,91 @@ void EdgeDislocation_100(double latticeConstant)
     }
 }
 
+void ConstructNeighborList()
+{
+    int i, j;
+    int d;
+    double distance;
+    double dr[3];
+    int neighborIndex_i, neighborIndex_j;
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        atoms[i].neighborNumber = 0;
+    }
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (j = i + 1; j < atomNumber; j++)
+        {
+            PBC_dr(i, j, dr);
+            distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]);
+            if (distance < neighborCutoff)
+            {
+                neighborIndex_i = atoms[i].neighborNumber;
+                neighborIndex_j = atoms[j].neighborNumber;
+                atoms[i].neighbors[neighborIndex_i].index = j;
+                atoms[j].neighbors[neighborIndex_j].index = i;
+                atoms[i].neighbors[neighborIndex_i].distance = distance;
+                atoms[j].neighbors[neighborIndex_j].distance = distance;
+                for (d = 0; d < 3; d++)
+                {
+                    atoms[i].neighbors[neighborIndex_i].dr[d] = dr[d];
+                    atoms[j].neighbors[neighborIndex_j].dr[d] = -dr[d];
+                }
+                atoms[i].neighborNumber++;
+                atoms[j].neighborNumber++;
+            }
+        }
+    }
+}
+
+
+
 /* main */
 int main()
 {
     /* parameters */
-    double latticeConstant = 1; 
-    latticeSizes[0][0] = -10;
-    latticeSizes[0][1] = 10;
-    latticeSizes[1][0] = -3;
-    latticeSizes[1][1] = 3;
-    latticeSizes[2][0] = -5;
-    latticeSizes[2][1] = 5;
-
-    priTranVecs[0][0] = latticeConstant;
-    priTranVecs[0][1] = 0;
-    priTranVecs[0][2] = 0;
-    priTranVecs[1][0] = 0;
-    priTranVecs[1][1] = latticeConstant;
-    priTranVecs[1][2] = 0;
-    priTranVecs[2][0] = 0;
-    priTranVecs[2][1] = 0;
-    priTranVecs[2][2] = latticeConstant;
-
-    cellAtomNumber = 1;
-    cellAtomRs[0][0] = 0;
-    cellAtomRs[0][1] = 0;
-    cellAtomRs[0][2] = 0;
-    cellAtomTypes[0] = 1;
-
-    boxStartPoint[0] = -10 * latticeConstant;
-    boxStartPoint[1] = -3 * latticeConstant;
-    boxStartPoint[2] = -5 * latticeConstant;
-
-    boxTranVecs[0][0] = latticeConstant * 20;
-    boxTranVecs[0][1] = 0;
-    boxTranVecs[0][2] = 0;
-    boxTranVecs[1][0] = 0;
-    boxTranVecs[1][1] = latticeConstant * 6;
-    boxTranVecs[1][2] = 0;
-    boxTranVecs[2][0] = 0;
-    boxTranVecs[2][1] = 0;
-    boxTranVecs[2][2] = latticeConstant * 10;
-    boxPerpendicular = 1;
+    neighborCutoff = 1.1;
 
     /* processing*/
-    ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
-    ConstructReducedLattice();
-    ConstructLattice();
-    ConstructCrystal();
+    ConstructStdCrystal_BCC(1.0, 5);
+    ConstructNeighborList();
 
-    EdgeDislocation_100(latticeConstant);
-    Dump_xyz("100_edge_dislocation.xyz");
+    /* output */
+    int n, d, index;
+    printf("count index neighbor_id x y z dx dy dz dr\n");
+    for (n = 0; n < atoms[0].neighborNumber; n++)
+    {
+        index = atoms[0].neighbors[n].index;
+        printf("%d %d %d ", n+1, index, atoms[index].id);
+        for (d = 0; d < 3; d++)
+        {
+            printf("%f ", atoms[index].r[d]);
+        }
+        for (d = 0; d < 3; d++)
+        {
+            printf("%f ", atoms[0].neighbors[n].dr[d]);
+        }
+        printf("%f \n", atoms[0].neighbors[n].distance);
+    }
 
     return 0;
 }
+
+/* output 
+count index neighbor_id dx dy dz dr
+1 1 2 0.500000 0.500000 0.500000 0.866025 
+2 2 3 0.000000 0.000000 1.000000 1.000000 
+3 8 9 0.000000 0.000000 -1.000000 1.000000 
+4 9 10 0.500000 0.500000 -0.500000 0.866025 
+5 10 11 0.000000 1.000000 0.000000 1.000000 
+6 40 41 0.000000 -1.000000 0.000000 1.000000 
+7 41 42 0.500000 -0.500000 0.500000 0.866025 
+8 49 50 0.500000 -0.500000 -0.500000 0.866025 
+9 50 51 1.000000 0.000000 0.000000 1.000000 
+10 200 201 -1.000000 0.000000 0.000000 1.000000 
+11 201 202 -0.500000 0.500000 0.500000 0.866025 
+12 209 210 -0.500000 0.500000 -0.500000 0.866025 
+13 241 242 -0.500000 -0.500000 0.500000 0.866025 
+14 249 250 -0.500000 -0.500000 -0.500000 0.866025 
+*/

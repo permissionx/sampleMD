@@ -20,6 +20,7 @@
 const double LJ_epsilon = 0.0031;
 const double LJ_sigma = 2.74;
 
+
 //EAM parameters
 const  int n_phi_EAM = 15;
 const  int n_rho_EAM = 4;
