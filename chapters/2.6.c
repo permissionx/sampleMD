@@ -6,7 +6,7 @@
 
 /* constants */
 #define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 100000  //maximum number of atoms
+#define MAX_ATOM_NUMBER 20000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
 /* classes */
@@ -58,11 +58,9 @@ void PBC_r_general();
 void PBC_dr_general(int i, int j, double dr[3]);
 void PBC_r_vertical();
 void PBC_dr_vertical(int i, int j, double dr[3]);
-
-void DeleteAtomByIndex(int index);
-void DeleteAtomsByShpereRegion(double center[3], double radius);
-void DeleteAtomsByBlockRegion(double block[3][2]);
-void InsertAtom(double r[3], int type);
+void ConstructStdCrystal_BCC(double latticeConstant, int length);
+void ConstructStdCrystal_FCC(double latticeConstant, int length);
+void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep);
 
 /* functions */
 void ConstructReducedLattice()
@@ -307,71 +305,14 @@ void PBC_dr(int i, int j, double dr[3])
     }
 }
 
-void DeleteAtomByIndex(int index)
+void ConstructStdCrystal_BCC(double latticeConstant, int length)
 {
-    int i;
-    for (i = index; i < atomNumber - 1; i++)
-    {
-        atoms[i] = atoms[i + 1];
-    }
-}
-
-void DeleteAtomsByShpereRegion(double center[3], double radius)
-{
-    int n, d;
-    double dr[3];
-    for (n = 0; n < atomNumber; n++)
-    {
-        for (d = 0; d < 3; d++)
-        {
-            dr[d] = atoms[n].r[d] - center[d];
-        }
-        if (dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2] <= radius * radius)
-        {
-            DeleteAtomByIndex(n);
-            n--;
-            atomNumber--;
-        }
-    }
-}
-
-void DeleteAtomsByBlockRegion(double block[3][2])
-{
-    int n;
-    for (n = 0; n < atomNumber; n++)
-    {
-        if (atoms[n].r[0] >= block[0][0] && atoms[n].r[0] <= block[0][1] &&
-            atoms[n].r[1] >= block[1][0] && atoms[n].r[1] <= block[1][1] &&
-            atoms[n].r[2] >= block[2][0] && atoms[n].r[2] <= block[2][1])
-        {
-            DeleteAtomByIndex(n);
-            n--;
-            atomNumber--;
-        }
-    }
-}
-
-void InsertAtom(double r[3], int type)
-{
-    atoms[atomNumber].id = atoms[atomNumber - 1].id + 1;
-    atoms[atomNumber].r[0] = r[0];
-    atoms[atomNumber].r[1] = r[1];
-    atoms[atomNumber].r[2] = r[2];
-    atoms[atomNumber].type = type;
-    atomNumber++;
-}
-
-/* main */
-int main()
-{
-    /* parameters */
-    double latticeConstant = 1.0;
-    latticeSizes[0][0] = -3;
-    latticeSizes[0][1] = 3;
-    latticeSizes[1][0] = -3;
-    latticeSizes[1][1] = 3;
-    latticeSizes[2][0] = -3;
-    latticeSizes[2][1] = 3;
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = length;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = length;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = length;
 
     priTranVecs[0][0] = latticeConstant;
     priTranVecs[0][1] = 0;
@@ -393,31 +334,124 @@ int main()
     cellAtomTypes[0] = 1;
     cellAtomTypes[1] = 1;
 
-    boxStartPoint[0] = -3;
-    boxStartPoint[1] = -3;
-    boxStartPoint[2] = -3;
+    boxStartPoint[0] = 0;
+    boxStartPoint[1] = 0;
+    boxStartPoint[2] = 0;
 
-    boxTranVecs[0][0] = latticeConstant * 6;
+    boxTranVecs[0][0] = latticeConstant * length;
     boxTranVecs[0][1] = 0;
     boxTranVecs[0][2] = 0;
     boxTranVecs[1][0] = 0;
-    boxTranVecs[1][1] = latticeConstant * 6;
+    boxTranVecs[1][1] = latticeConstant * length;
     boxTranVecs[1][2] = 0;
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
-    boxTranVecs[2][2] = latticeConstant * 6;
+    boxTranVecs[2][2] = latticeConstant * length;
     boxPerpendicular = 1;
 
-    /* processing and output*/
-    ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
+}
 
-    Dump_xyz("origin.xyz");
-    double center[3] = {0, 0, 0};
-    DeleteAtomsByShpereRegion(center, 0.2);
-    Dump_xyz("vacancy.xyz");
+void ConstructStdCrystal_FCC(double latticeConstant, int length)
+{
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = length;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = length;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = length;
+
+    priTranVecs[0][0] = latticeConstant;
+    priTranVecs[0][1] = 0;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][0] = 0;
+    priTranVecs[1][1] = latticeConstant;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[2][1] = 0;
+    priTranVecs[2][2] = latticeConstant;
+
+    cellAtomNumber = 4;
+    cellAtomRs[0][0] = 0.0;
+    cellAtomRs[0][1] = 0.0;
+    cellAtomRs[0][2] = 0.0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant;
+    cellAtomRs[1][2] = 0.0;
+    cellAtomRs[2][0] = 0.5 * latticeConstant;
+    cellAtomRs[2][1] = 0.0;
+    cellAtomRs[2][2] = 0.5 * latticeConstant;
+    cellAtomRs[3][0] = 0.0;
+    cellAtomRs[3][1] = 0.5 * latticeConstant;
+    cellAtomRs[3][2] = 0.5 * latticeConstant;
+    cellAtomTypes[0] = 1;
+    cellAtomTypes[1] = 1;
+    cellAtomTypes[2] = 1;
+    cellAtomTypes[3] = 1;
+
+    boxStartPoint[0] = 0;
+    boxStartPoint[1] = 0;
+    boxStartPoint[2] = 0;
+
+    boxTranVecs[0][0] = latticeConstant * length;
+    boxTranVecs[0][1] = 0;
+    boxTranVecs[0][2] = 0;
+    boxTranVecs[1][0] = 0;
+    boxTranVecs[1][1] = latticeConstant * length;
+    boxTranVecs[1][2] = 0;
+    boxTranVecs[2][0] = 0;
+    boxTranVecs[2][1] = 0;
+    boxTranVecs[2][2] = latticeConstant * length;
+    boxPerpendicular = 1;
+
+    ConstructReducedLattice();
+    ConstructLattice();
+    ConstructCrystal();
+}
+
+void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
+{
+    int n;
+    FILE *fp;
+    if (boxPerpendicular != 1)
+    {
+        printf("Error: Dump_lammpstrj() only works in cuboid.\n");
+        exit(1);
+    }
+    if (isNewFile)
+    {
+        fp = fopen(fileName, "w");
+    }
+    else
+    {
+        fp = fopen(fileName, "a");
+    }
+    fprintf(fp, "ITEM: TIMESTEP\n");
+    fprintf(fp, "%d\n", dumpStep);
+    fprintf(fp, "ITEM: NUMBER OF ATOMS\n");
+    fprintf(fp, "%d\n", atomNumber);
+    fprintf(fp, "ITEM: BOX BOUNDS pp pp pp\n");
+    fprintf(fp, "%f %f\n", boxStartPoint[0], boxStartPoint[0] + boxTranVecs[0][0]);
+    fprintf(fp, "%f %f\n", boxStartPoint[1], boxStartPoint[1] + boxTranVecs[1][1]);
+    fprintf(fp, "%f %f\n", boxStartPoint[2], boxStartPoint[2] + boxTranVecs[2][2]);
+    fprintf(fp, "ITEM: ATOMS id type x y z\n");
+    for (n = 0; n < atomNumber; n++)
+    {
+        fprintf(fp, "%d %d %f %f %f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
+    }
+    fclose(fp);
+}
+
+/* main */
+int main()
+{
+    /* processing and output*/
+    ConstructStdCrystal_BCC(1.0, 10);
+    Dump_lammpstrj("std_bcc.lammpstrj",1,1);
+    ConstructStdCrystal_FCC(1.0, 10);
+    Dump_lammpstrj("std_fcc.lammpstrj",1,1);
 
     return 0;
-}
+}    

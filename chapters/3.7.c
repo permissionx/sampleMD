@@ -15,6 +15,62 @@
 #define LJ_2_EPSILON 0.0062                     // 4 * LJ_EPSILON
 #define LJ_24_EPSILON_SIGMA_6 31.48301472289983 // 24 * LJ_EPSILON * pow(LJ_SIGMA, 6)
 #define LJ_2_SIGMA_6 846.3176000779524          // 2 * pow(LJ_SIGMA, 6)
+// EAM parameters for W
+// data source: M. C. Marinica, et al., J. Phys. Condens. Matter 25, (2013).
+const int n_phi_EAM = 15;
+const int n_rho_EAM = 4;
+const double rc_EAM = 2.002970124727;
+const double pho_rc_EAM = 1.193547157792;
+double a_phi_EAM[15] =
+    {
+        0.960851701343041e2,
+        -0.184410923895214e3,
+        0.935784079613550e2,
+        -0.798358265041677e1,
+        0.747034092936229e1,
+        -0.152756043708453e1,
+        0.125205932634393e1,
+        0.163082162159425e1,
+        -0.141854775352260e1,
+        -0.819936046256149e0,
+        0.198013514305908e1,
+        -0.696430179520267e0,
+        0.304546909722160e-1,
+        -0.163131143161660e1,
+        0.138409896486177e1};
+double a_rho_EAM[4] =
+    {
+        -0.420429107805055e1,
+        0.518217702261442e0,
+        0.562720834534370e-1,
+        0.344164178842340e-1};
+
+const double a1_f_EAM = -5.946454472402710;
+const double a2_f_EAM = -0.049477376935239;
+
+double delta_phi_EAM[15] =
+    {
+        2.5648975000,
+        2.6297950000,
+        2.6946925000,
+        2.8663175000,
+        2.9730450000,
+        3.0797725000,
+        3.5164725000,
+        3.8464450000,
+        4.1764175000,
+        4.7008450000,
+        4.8953000000,
+        5.0897550000,
+        5.3429525000,
+        5.4016950000,
+        5.4604375000};
+double delta_rho_EAM[4] =
+    {
+        2.500000000000000,
+        3.100000000000000,
+        3.500000000000000,
+        4.900000000000000};
 
 /* classes */
 struct LatticePoint
@@ -40,6 +96,8 @@ struct Atom
     struct AtomNeighbor neighbors[MAX_NEIGHBOR_NUMBER];
     double force[3];
     double potentialEnergy;
+    double rho_EAM;
+    double af_EAM;
 };
 
 /* global variables */
@@ -62,6 +120,8 @@ int boxPerpendicular;
 double neighborCutoff;
 double potentialCutoff_LJ;
 double totalPotentialEnergy;
+int nStep;
+int neighborInterval;
 
 /* function declarations */
 void ConstructReducedLattice();
@@ -92,6 +152,9 @@ void EdgeDislocation_100(double latticeConstant);
 
 void ConstructNeighborList();
 void Potential_LJ(int isEnergy, int isForce);
+void Potential_EAM(int isEnergy, int isForce);
+void NeighborList();
+void UpdateNeighborList();
 
 /* functions */
 void ConstructReducedLattice()
@@ -480,10 +543,10 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
     fprintf(fp, "ITEM: ATOMS id type x y z pe fx fy fz\n");
     for (n = 0; n < atomNumber; n++)
     {
-        fprintf(fp, "%d %d %f %f %f %f %f %f %f\n", 
-        atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2],
-        atoms[n].potentialEnergy,
-        atoms[n].force[0], atoms[n].force[1], atoms[n].force[2]);
+        fprintf(fp, "%d %d %f %f %f %f %f %f %f\n",
+                atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2],
+                atoms[n].potentialEnergy,
+                atoms[n].force[0], atoms[n].force[1], atoms[n].force[2]);
     }
     fclose(fp);
 }
@@ -665,25 +728,309 @@ void Potential_LJ(int isEnergy, int isForce)
     }
 }
 
+void Potential_EAM(int isEnergy, int isForce)
+{
+    int i, j;
+    double distance;
+    double energyPhi, energyRho;
+    double forcePhi, forceRho, tmpForce;
+    double tmpRho, sqrtTmpRho;
+    double tmpVariable; // very short lifetime: two lines
+    int n;
+    int d;
+    int jAtomIndex;
+    if (isEnergy)
+    {
+        totalPotentialEnergy = 0.0;
+    }
+    // compute atom rho and rho self-related expressions
+    for (i = 0; i < atomNumber; i++)
+    {
+        tmpRho = 0.0;
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+            distance = atoms[i].neighbors[j].distance;
+            if (distance > rc_EAM)
+            {
+
+                for (n = 0; n < n_rho_EAM; n++)
+                {
+                    if (distance < delta_rho_EAM[n])
+                    {
+                        tmpVariable = delta_rho_EAM[n] - distance;
+                        tmpRho += a_rho_EAM[n] * tmpVariable * tmpVariable * tmpVariable;
+                    }
+                }
+            }
+            else
+            {
+                tmpRho += pho_rc_EAM;
+            }
+        }
+        atoms[i].rho_EAM = tmpRho;
+        sqrtTmpRho = sqrt(tmpRho);
+        if (isEnergy)
+        {
+            // rho component for energy
+            energyRho = a1_f_EAM * sqrtTmpRho + a2_f_EAM * tmpRho * tmpRho;
+            totalPotentialEnergy += energyRho;
+            atoms[i].potentialEnergy = energyRho;
+        }
+        if (isForce)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].force[d] = 0;
+            }
+            atoms[i].af_EAM = 0.5 * a1_f_EAM / sqrtTmpRho + 2 * a2_f_EAM * tmpRho;
+        }
+    }
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+            distance = atoms[i].neighbors[j].distance;
+            if (isEnergy)
+            // phi component for energy
+            {
+                energyPhi = 0.0;
+                for (n = 0; n < n_phi_EAM; n++)
+                {
+                    if (distance < delta_phi_EAM[n])
+                    {
+                        tmpVariable = delta_phi_EAM[n] - distance;
+                        energyPhi += a_phi_EAM[n] * tmpVariable * tmpVariable * tmpVariable;
+                    }
+                }
+                energyPhi *= 0.5;
+                atoms[i].potentialEnergy += energyPhi;
+                totalPotentialEnergy += energyPhi;
+            }
+            if (isForce)
+            {
+                // phi component for force
+                forcePhi = 0.0;
+                for (n = 0; n < n_phi_EAM; n++)
+                {
+                    if (distance < delta_phi_EAM[n])
+                    {
+                        tmpVariable = delta_phi_EAM[n] - distance;
+                        forcePhi += -3 * a_phi_EAM[n] * tmpVariable * tmpVariable;
+                    }
+                }
+
+                // rho component for force
+                forceRho = 0.0;
+                for (n = 0; n < n_rho_EAM; n++)
+                {
+                    if (distance < delta_rho_EAM[n])
+                    {
+                        tmpVariable = delta_rho_EAM[n] - distance;
+                        forceRho += -3 * a_rho_EAM[n] * tmpVariable * tmpVariable;
+                    }
+                }
+
+                // sum force
+                jAtomIndex = atoms[i].neighbors[j].index;
+                tmpForce = (((atoms[i].af_EAM + atoms[jAtomIndex].af_EAM) * forceRho) + forcePhi) / distance;
+                for (d = 0; d < 3; d++)
+                {
+                    atoms[i].force[d] += tmpForce * atoms[i].neighbors[j].dr[d];
+                }
+            }
+        }
+    }
+}
+
+void NeighborList()
+{
+    if (nStep % neighborInterval == 0)
+    {
+        ConstructNeighborList();
+    }
+    else
+    {
+        UpdateNeighborList();
+    }
+}
+
+void UpdateNeighborList()
+{
+    int i, j, d;
+    int jAtomIndex;
+    double dr[3];
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+            jAtomIndex = atoms[i].neighbors[j].index;
+            PBC_dr(i, jAtomIndex, dr);
+            atoms[i].neighbors[j].distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]);
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].neighbors[j].dr[d] = dr[d];
+            }
+        }
+    }
+}
+
 /* main */
 int main()
 {
     /* parameters */
-    double latticeConstant = 4.23;
-    boxPerpendicular = 1;
-    neighborCutoff = latticeConstant * 4.1;
-    potentialCutoff_LJ = neighborCutoff;
+    neighborInterval = 10000;
+    neighborCutoff = 4.1 * 3.7;
+    /* processing and output*/
+    double latticeConstant;
 
-    /* processing*/
-    ConstructStdCrystal_FCC(4.23, 6);
-    double vacancyPosition[3] = {0, 0, 0};
-    DeleteAtomsByShpereRegion(vacancyPosition, 0.1);
-    ConstructNeighborList();
-    Potential_LJ(1, 1);
-
-    /* output */
-    Dump_lammpstrj("vacancy_in_Ne_FCC.lammpstrj", 1, 1);
-
+    printf("lattice_constant(A) pe(eV/atom)\n");
+    nStep = 0;
+    for (latticeConstant = 3.7; latticeConstant < 5.0; latticeConstant += 0.01)
+    {
+        ConstructStdCrystal_FCC(latticeConstant, 10);
+        potentialCutoff_LJ = 4.1 * latticeConstant;
+        NeighborList();
+        Potential_LJ(1, 0);
+        printf("%f %f\n", latticeConstant, totalPotentialEnergy / atomNumber);
+        nStep += 1;
+    }
 
     return 0;
 }
+
+
+/*output
+lattice_constant(A) pe(eV)
+3.700000 0.012993
+3.710000 0.010714
+3.720000 0.008544
+3.730000 0.006478
+3.740000 0.004511
+3.750000 0.002639
+3.760000 0.000858
+3.770000 -0.000835
+3.780000 -0.002445
+3.790000 -0.003974
+3.800000 -0.005427
+3.810000 -0.006807
+3.820000 -0.008116
+3.830000 -0.009357
+3.840000 -0.010534
+3.850000 -0.011649
+3.860000 -0.012705
+3.870000 -0.013705
+3.880000 -0.014650
+3.890000 -0.015543
+3.900000 -0.016386
+3.910000 -0.017181
+3.920000 -0.017931
+3.930000 -0.018637
+3.940000 -0.019302
+3.950000 -0.019926
+3.960000 -0.020512
+3.970000 -0.021061
+3.980000 -0.021576
+3.990000 -0.022057
+4.000000 -0.022505
+4.010000 -0.022923
+4.020000 -0.023312
+4.030000 -0.023672
+4.040000 -0.024006
+4.050000 -0.024314
+4.060000 -0.024598
+4.070000 -0.024858
+4.080000 -0.025095
+4.090000 -0.025311
+4.100000 -0.025507
+4.110000 -0.025683
+4.120000 -0.025841
+4.130000 -0.025980
+4.140000 -0.026103
+4.150000 -0.026210
+4.160000 -0.026301
+4.170000 -0.026377
+4.180000 -0.026439
+4.190000 -0.026488
+4.200000 -0.026524
+4.210000 -0.026548
+4.220000 -0.026560
+4.230000 -0.026561
+4.240000 -0.026552
+4.250000 -0.026532
+4.260000 -0.026504
+4.270000 -0.026466
+4.280000 -0.026419
+4.290000 -0.026365
+4.300000 -0.026303
+4.310000 -0.026233
+4.320000 -0.026156
+4.330000 -0.026073
+4.340000 -0.025984
+4.350000 -0.025889
+4.360000 -0.025788
+4.370000 -0.025682
+4.380000 -0.025571
+4.390000 -0.025455
+4.400000 -0.025335
+4.410000 -0.025211
+4.420000 -0.025082
+4.430000 -0.024951
+4.440000 -0.024815
+4.450000 -0.024677
+4.460000 -0.024535
+4.470000 -0.024391
+4.480000 -0.024244
+4.490000 -0.024095
+4.500000 -0.023944
+4.510000 -0.023790
+4.520000 -0.023635
+4.530000 -0.023477
+4.540000 -0.023318
+4.550000 -0.023158
+4.560000 -0.022997
+4.570000 -0.022834
+4.580000 -0.022670
+4.590000 -0.022505
+4.600000 -0.022339
+4.610000 -0.022173
+4.620000 -0.022006
+4.630000 -0.021838
+4.640000 -0.021670
+4.650000 -0.021501
+4.660000 -0.021333
+4.670000 -0.021164
+4.680000 -0.020995
+4.690000 -0.020826
+4.700000 -0.020657
+4.710000 -0.020488
+4.720000 -0.020319
+4.730000 -0.020150
+4.740000 -0.019982
+4.750000 -0.019814
+4.760000 -0.019647
+4.770000 -0.019479
+4.780000 -0.019313
+4.790000 -0.019147
+4.800000 -0.018981
+4.810000 -0.018816
+4.820000 -0.018652
+4.830000 -0.018488
+4.840000 -0.018326
+4.850000 -0.018163
+4.860000 -0.018002
+4.870000 -0.017842
+4.880000 -0.017682
+4.890000 -0.017523
+4.900000 -0.017365
+4.910000 -0.017208
+4.920000 -0.017052
+4.930000 -0.016896
+4.940000 -0.016742
+4.950000 -0.016589
+4.960000 -0.016437
+4.970000 -0.016285
+4.980000 -0.016135
+4.990000 -0.015986
+5.000000 -0.015838
+*/
