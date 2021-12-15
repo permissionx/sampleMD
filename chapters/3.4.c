@@ -682,7 +682,7 @@ int main()
     Potential_LJ(1, 1);
 
     /* output */
-    Dump_lammpstrj("vacancy_in_Ne_FCC.lammpstrj", 1, 1);
+    Dump_lammpstrj("vacancy_Ne_FCC.lammpstrj", 1, 1);
 
 
     return 0;

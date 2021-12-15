@@ -352,7 +352,6 @@ int main()
     boxPerpendicular = 1;
 
     /* processing */
-    ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
