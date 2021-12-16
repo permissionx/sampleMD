@@ -120,6 +120,7 @@ int boxPerpendicular;
 double neighborCutoff;
 double potentialCutoff_LJ;
 double totalPotentialEnergy;
+char potentialName[20];
 
 /* function declarations */
 void ConstructReducedLattice();
@@ -151,6 +152,7 @@ void EdgeDislocation_100(double latticeConstant);
 void ConstructNeighborList();
 void Potential_LJ(int isEnergy, int isForce);
 void Potential_EAM(int isEnergy, int isForce);
+void Potential(int isEnergy, int isForce);
 
 /* functions */
 void ConstructReducedLattice()
@@ -839,17 +841,36 @@ void Potential_EAM(int isEnergy, int isForce)
     }
 }
 
+void Potential(int isEnergy, int isForce)
+{
+    if (strcmp(potentialName, "LJ") == 0)
+
+    {
+        Potential_LJ(isEnergy, isForce);
+    }
+    else if (strcmp(potentialName, "EAM") == 0)
+    {
+        Potential_EAM(isEnergy, isForce);
+    }
+    else
+    {
+        printf("Error: Potential %s not found.\n", potentialName);
+        exit(1);
+    }
+}
+
 /* main */
 int main()
 {
     /* parameters */
     neighborCutoff = 6.0;
+    strcpy(potentialName, "EAM");
     /* processing*/
     ConstructStdCrystal_BCC(3.14, 10);
     double deleteBlock[3][2] = {{-0.1, 10.1 * 3.14}, {-0.1, 10.1 * 3.14}, {5.1 * 3.14, 10.1 * 3.14}};
     DeleteAtomsByBlockRegion(deleteBlock);
     ConstructNeighborList();
-    Potential_EAM(1, 1);
+    Potential(1, 1);
 
     /* output */
     Dump_lammpstrj("surface_W_BCC.lammpstrj", 1, 1);
