@@ -84,9 +84,10 @@ int main()
 
     /* output */
     int n;
+    printf("               x                y                z\n");
     for (n = 0; n < latticePointNumber; n++)
     {
-        printf("%f %f %f\n", latticePoints[n].r[0], latticePoints[n].r[1], latticePoints[n].r[2]);
+        printf("%16.6f %16.6f %16.6f\n", latticePoints[n].r[0], latticePoints[n].r[1], latticePoints[n].r[2]);
     }
 
     return 0;

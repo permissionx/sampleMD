@@ -132,9 +132,10 @@ int main()
 
     /*output*/
     int n;
+    printf("    id   type                x                y                z\n");
     for (n = 0; n < atomNumber; n++)
     {
-        printf("%d %d %f %f %f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
+        printf("%6d %6d %16.6f %16.6f %16.6f\n", atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2]);
     }
 
     return 0;

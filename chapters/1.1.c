@@ -58,40 +58,42 @@ int main()
 
     /* output */
     int n;
+    printf(" rex  rey  rez\n");
     for (n = 0; n < latticePointNumber; n++)
     {
-        printf("%d %d %d\n", latticePoints[n].reR[0], latticePoints[n].reR[1], latticePoints[n].reR[2]);
+        printf("%4d %4d %4d\n", latticePoints[n].reR[0], latticePoints[n].reR[1], latticePoints[n].reR[2]);
     }
 
     return 0;
 }
 
 /* output
-0 0 0
-0 0 1
-0 0 2
-0 1 0
-0 1 1
-0 1 2
-0 2 0
-0 2 1
-0 2 2
-1 0 0
-1 0 1
-1 0 2
-1 1 0
-1 1 1
-1 1 2
-1 2 0
-1 2 1
-1 2 2
-2 0 0
-2 0 1
-2 0 2
-2 1 0
-2 1 1
-2 1 2
-2 2 0
-2 2 1
-2 2 2
+ rex  rey  rez
+   0    0    0
+   0    0    1
+   0    0    2
+   0    1    0
+   0    1    1
+   0    1    2
+   0    2    0
+   0    2    1
+   0    2    2
+   1    0    0
+   1    0    1
+   1    0    2
+   1    1    0
+   1    1    1
+   1    1    2
+   1    2    0
+   1    2    1
+   1    2    2
+   2    0    0
+   2    0    1
+   2    0    2
+   2    1    0
+   2    1    1
+   2    1    2
+   2    2    0
+   2    2    1
+   2    2    2
 */

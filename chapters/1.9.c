@@ -20,6 +20,7 @@ struct Atom
 {
     int id, type;
     double r[3];
+    double reR[3];
 };
 
 /* global variables */
@@ -38,10 +39,11 @@ double recPriTranVecs[3][3];
 void ConstructReducedLattice();
 void ConstructLattice();
 void ConstructCrystal();
-void Dump(char fileName[20]);
+void Dump_xyz(char fileName[20]);
 double VecDotMul(double vec1[3], double vec2[3]);
 void VecCroMul(double vec1[3], double vec2[3], double vecOut[3]);
 void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3]);
+void ComputeAtomReR();
 
 /* functions */
 void ConstructReducedLattice()
@@ -71,7 +73,7 @@ void ConstructLattice()
     {
         for (d = 0; d < 3; d++)
         {
-            latticePoints[n].r[d] = latticePoints[n].reR[0] * priTranVecs[0][d] + latticePoints[n].reR[1] * priTranVecs[1][d] + latticePoints[n].reR[2] * priTranVecs[2][d];
+            latticePoints[n].r[d] = priTranVecs[0][d] * latticePoints[n].reR[0] + priTranVecs[1][d] * latticePoints[n].reR[1] + priTranVecs[2][d] * latticePoints[n].reR[2];
         }
     }
 }
@@ -97,8 +99,7 @@ void ConstructCrystal()
     atomNumber = nAtom;
 }
 
-
-void Dump(char fileName[20])
+void Dump_xyz(char fileName[20])
 {
     int n;
     FILE *fp;
@@ -126,7 +127,7 @@ void VecCroMul(double vec1[3], double vec2[3], double vecOut[3])
 
 void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3])
 {
-    int i, d; 
+    int i, d;
     double cellVol;
     double tmpVec[3]; // temperary vectors
 
@@ -137,48 +138,99 @@ void ComputeRecTranVecs(double tranVecs[3][3], double recTranVecs[3][3])
         VecCroMul(tranVecs[(i + 1) % 3], tranVecs[(i + 2) % 3], recTranVecs[i]);
         for (d = 0; d < 3; d++)
         {
-            recTranVecs[i][d] /= cellVol;  // 2pi factor ignored
+            recTranVecs[i][d] /= cellVol; // 2pi factor ignored
         }
     }
 }
 
+void ComputeAtomReR()
+{
+    int n, d;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].reR[d] = recPriTranVecs[d][0] * atoms[n].r[0] + recPriTranVecs[d][1] * atoms[n].r[1] + recPriTranVecs[d][2] * atoms[n].r[2];
+        }
+    }
+}
 
-
-
-/*main*/
+/* main */
 int main()
 {
-    /*parameters*/
-    double latticeConstant = 2;
-    priTranVecs[0][0] = 0.5*latticeConstant;
-    priTranVecs[0][1] = 0.5*latticeConstant;
-    priTranVecs[0][2] = -0.5*latticeConstant;
-    priTranVecs[1][0] = 0.5*latticeConstant;
-    priTranVecs[1][1] = -0.5*latticeConstant;
-    priTranVecs[1][2] = 0.5*latticeConstant;
-    priTranVecs[2][0] = -0.5*latticeConstant;
-    priTranVecs[2][1] = 0.5*latticeConstant;
-    priTranVecs[2][2] = 0.5*latticeConstant;
+    /* parameters */
+    double latticeConstant = 3.14; //unit: angstrom
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = 3;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = 3;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = 3;
 
-    /*processing*/
+    priTranVecs[0][0] = 0.5 * latticeConstant;
+    priTranVecs[0][1] = 0.5 * latticeConstant;
+    priTranVecs[0][2] = -0.5 * latticeConstant;
+    priTranVecs[1][0] = 0.5 * latticeConstant;
+    priTranVecs[1][1] = -0.5 * latticeConstant;
+    priTranVecs[1][2] = 0.5 * latticeConstant;
+    priTranVecs[2][0] = -0.5 * latticeConstant;
+    priTranVecs[2][1] = 0.5 * latticeConstant;
+    priTranVecs[2][2] = 0.5 * latticeConstant;
+
+    cellAtomNumber = 1;
+    cellAtomRs[0][0] = 0;
+    cellAtomRs[0][1] = 0;
+    cellAtomRs[0][2] = 0;
+    cellAtomTypes[0] = 1;
+
+    /* processing */
+    ConstructReducedLattice();
+    ConstructLattice();
+    ConstructCrystal();
     ComputeRecTranVecs(priTranVecs, recPriTranVecs);
+    ComputeAtomReR();
     
-    /*output*/
-    int i,j;
-    for (i = 0; i < 3; i++)
+
+    /* output */
+    int n, d;
+    printf("             rex              rey              rez\n");
+    for (n = 0; n < atomNumber; n++)
     {
-        for (j = 0; j < 3; j++)
+        for (d = 0; d < 3; d++)
         {
-            printf("%f ", recPriTranVecs[i][j]);
+            printf("%16.6f ", atoms[n].reR[d]);
         }
         printf("\n");
     }
-    printf("Note: Prefactor pi is ignored.\n");
 }
 
 /* output
-0.500000 0.500000 -0.000000 
-0.500000 -0.000000 0.500000 
--0.000000 0.500000 0.500000 
-Note: Prefactor pi is ignored.\n
+             rex              rey              rez
+        0.000000         0.000000         0.000000 
+        0.000000         0.000000         1.000000 
+        0.000000         0.000000         2.000000 
+        0.000000         1.000000         0.000000 
+        0.000000         1.000000         1.000000 
+        0.000000         1.000000         2.000000 
+        0.000000         2.000000         0.000000 
+        0.000000         2.000000         1.000000 
+        0.000000         2.000000         2.000000 
+        1.000000         0.000000         0.000000 
+        1.000000         0.000000         1.000000 
+        1.000000         0.000000         2.000000 
+        1.000000         1.000000         0.000000 
+        1.000000         1.000000         1.000000 
+        1.000000         1.000000         2.000000 
+        1.000000         2.000000         0.000000 
+        1.000000         2.000000         1.000000 
+        1.000000         2.000000         2.000000 
+        2.000000         0.000000         0.000000 
+        2.000000         0.000000         1.000000 
+        2.000000         0.000000         2.000000 
+        2.000000         1.000000         0.000000 
+        2.000000         1.000000         1.000000 
+        2.000000         1.000000         2.000000 
+        2.000000         2.000000         0.000000 
+        2.000000         2.000000         1.000000 
+        2.000000         2.000000         2.000000 
 */

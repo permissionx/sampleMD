@@ -167,11 +167,13 @@ int main()
 
     /*output*/
     int i,j;
+    printf("                  x                y                z\n");
     for (i = 0; i < 3; i++)
     {
+        printf("b%d ",i+1);
         for (j = 0; j < 3; j++)
         {
-            printf("%f ", recPriTranVecs[i][j]);
+            printf("%16.6f ", recPriTranVecs[i][j]);
         }
         printf("\n");
     }
@@ -179,8 +181,10 @@ int main()
 }
 
 /* output
-0.500000 0.000000 0.000000 
-0.000000 0.500000 0.000000 
-0.000000 0.000000 0.500000 
-Note: Prefactor pi is ignored.\n
+                  x                y                z
+b1         0.500000         0.000000         0.000000 
+b2         0.000000         0.500000         0.000000 
+b3         0.000000         0.000000         0.500000 
 */
+
+// check if sequence of i,j correct 
