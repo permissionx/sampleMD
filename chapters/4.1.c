@@ -1,118 +1,145 @@
 #include <stdio.h>
 #include <math.h>
-#define MO 10 // MAX ORDER
+#define MAX_ORDER 10 // MAX ORDER
 
-void SteepestDescent(int order, double A[MO][MO], double b[MO], double gCriteria, double x[MO]);
-void Direction_SD(int order, double A[MO][MO], double b[MO], double x[MO], double d[MO]);
-double Lambda(int order, double A[MO][MO], double g[MO]);
-double Norm(int order, double vec[MO]);
+void Minimize_SD(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double tol, double x[MAX_ORDER]);
+void Gradient(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double x[MAX_ORDER], double gradient[MAX_ORDER]);
+double Lambda(int order, double A[MAX_ORDER][MAX_ORDER], double gradient[MAX_ORDER], double direction[MAX_ORDER]);
+double f(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double x[MAX_ORDER]);
+double Norm(int order, double vector[MAX_ORDER]);
 
-void SteepestDescent(int order, double A[MO][MO], double b[MO], double gCriteria, double x[MO])
+void Minimize_SD(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double tol, double x[MAX_ORDER])
 {
-    double d[MO];
-    double gNorm;
+    double gradient[MAX_ORDER];
+    double gradientLength;
     double lambda;
+    double y;
     int i;
-    int o;
+    int nstep;
 
-    i = 0;
-    Direction_SD(order, A, b, x, d);
-    printf("i ");
-    for (o = 0; o < order; o++)
+    printf("nstep ");
+    for (i = 0; i < order; i++)
     {
-        printf("x%d ", o + 1);
+        printf("x%d ", i + 1);
     }
-    printf("gradient_norm\n");
-    do
+    printf("gradient_length y\n");
+
+    Gradient(order, A, b, x, gradient);
+    gradientLength = Norm(order, gradient);
+    printf("  0 ");
+    for (i = 0; i < order; i++)
     {
-        printf("%d ", i);
-        for (o = 0; o < order; o++)
+        printf("%15.8f ",x[i]);
+    }
+    y = f(order, A, b, x);
+    printf("%15.8f %15.8f\n", gradientLength, y);
+    nstep = 0;
+    while (gradientLength > tol)
+    {
+        nstep += 1;
+        printf("%3d ", nstep);
+        lambda = Lambda(order, A, gradient, gradient);
+        for (i = 0; i < order; i++)
         {
-            printf("%f ", x[o]);
+            x[i] -= lambda * gradient[i];
+            printf("%15.8f ", x[i]);
         }
-        lambda = Lambda(order, A, d);
-        for (o = 0; o < order; o++)
-        {
-            x[o] += lambda * d[o];
-        }
-        Direction_SD(order, A, b, x, d);
-        gNorm = Norm(order, d);
-        printf("%f\n", gNorm);
-        i += 1;
-    } while (gNorm > gCriteria);
+        y = f(order, A, b, x);
+        Gradient(order, A, b, x, gradient);
+        gradientLength = Norm(order, gradient);
+        printf("%15.8f %15.8f\n", gradientLength, y);
+    };
 }
 
-void Direction_SD(int order, double A[MO][MO], double b[MO], double x[MO], double d[MO])
+void Gradient(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double x[MAX_ORDER], double gradient[MAX_ORDER])
 {
     int i, j;
     for (i = 0; i < order; i++)
     {
-        d[i] = 0;
+        gradient[i] = 0;
         for (j = 0; j < order; j++)
         {
-            d[i] += A[i][j] * x[j];
+            gradient[i] += A[i][j] * x[j];
         }
-        d[i] = b[i] - d[i];
+        gradient[i] -= b[i];
     }
 }
 
-double Lambda(int order, double A[MO][MO], double g[MO])
+double Lambda(int order, double A[MAX_ORDER][MAX_ORDER], double gradient[MAX_ORDER], double direction[MAX_ORDER])
 {
-    double lambda;
     int i, j;
-    double up, down, tmp;
-    up = 0;
-    down = 0;
+    double ad_tmp, denominator_tmp, numerator_tmp;
+
+    numerator_tmp = 0;
+    denominator_tmp = 0;
     for (i = 0; i < order; i++)
     {
-        tmp = 0;
+        ad_tmp = 0;
         for (j = 0; j < order; j++)
         {
-            tmp += A[i][j] * g[j];
+            ad_tmp += A[i][j] * direction[j];
         }
-        down += g[i] * tmp;
-        up += g[i] * g[i];
+        denominator_tmp += ad_tmp * direction[i];
+        numerator_tmp += gradient[i] * gradient[i];
     }
-    lambda = up / down;
-    return lambda;
+    return numerator_tmp / denominator_tmp;
 }
 
-double Norm(int order, double vec[MO])
+double f(int order, double A[MAX_ORDER][MAX_ORDER], double b[MAX_ORDER], double x[MAX_ORDER])
 {
+    int i, j;
+    double result;
+    double ax_tmp;
+    result = 0;
+    for (i = 0; i < order; i++)
+    {
+        ax_tmp = 0;
+        for (j = 0; j < order; j++)
+        {
+            ax_tmp += A[i][j] * x[j];
+        }
+        result += x[i] * ax_tmp * 0.5 - b[i] * x[i];
+    }
+    return result;
+}
+
+double Norm(int order, double vector[MAX_ORDER])
+{
+    int i;
     double norm;
-    int o;
     norm = 0;
-    for (o = 0; o < order; o++)
+    for (i = 0; i < order; i++)
     {
-        norm += vec[o] * vec[o];
+        norm += vector[i] * vector[i];
     }
-    norm = sqrt(norm);
-    return norm;
+    return sqrt(norm);
 }
 
 int main()
 {
-    double A[MO][MO];
-    double b[MO];
-    double x[MO];
+    double A[MAX_ORDER][MAX_ORDER];
+    double b[MAX_ORDER];
+    double x[MAX_ORDER];
+    double result;
+    int order;
+    double tol;
 
-    /* parameters */
-    int order = 2;
-    double gCriteria = 0.01;
+    x[0] = 1.25;
+    x[1] = -1.08073;
     A[0][0] = 3;
     A[0][1] = 2;
     A[1][0] = 2;
     A[1][1] = 6;
     b[0] = 2;
     b[1] = -8;
+    order = 2;
+    tol = 1E-2;
 
-    /* processing and output */
-    x[0] = 1.25;
-    x[1] = -1.08073;
-    printf("------Steepest descent demo------\n");
+    printf("------Steepest descent------\n");
     printf("Equation:\n");
     printf("╭ %5.2f %5.2f ╮╭ x1 ╮ = ╭ %5.2f ╮\n", A[0][0], A[0][1], b[0]);
     printf("╰ %5.2f %5.2f ╯╰ x2 ╯   ╰ %5.2f ╯\n", A[1][0], A[1][1], b[1]);
     printf("\n");
-    SteepestDescent(order, A, b, gCriteria, x);
+
+    Minimize_SD(order, A, b, tol, x);
 }
