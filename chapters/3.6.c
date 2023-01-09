@@ -871,6 +871,7 @@ int main()
     DeleteAtomsByBlockRegion(deleteBlock);
     ConstructNeighborList();
     Potential(1, 1);
+    printf("%f",totalPotentialEnergy);
 
     /* output */
     Dump_lammpstrj("surface_W_BCC.lammpstrj", 1, 1);
