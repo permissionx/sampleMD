@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 /* constants */
-#define MAX_LATTICE_NUMBER 20000  // maximum number of lattices
-#define MAX_ATOM_NUMBER 200000    // maximum number of atoms
+#define MAX_LATTICE_NUMBER 20000 // maximum number of lattices
+#define MAX_ATOM_NUMBER 200000   // maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10  // maximum number of atoms in a cell
 #define MAX_NEIGHBOR_NUMBER 2000 // maximum number of neighbors
 // L-J parameters for Ne
@@ -183,6 +183,7 @@ void LineMinimize();
 double GaussianRandom(double mu, double sigma);
 void InitMassUnit();
 void VelocityMaxwell(double temperature);
+void ZeroMomentum();
 
 /* functions */
 void ConstructReducedLattice()
@@ -1070,7 +1071,7 @@ double GaussianRandom(double mu, double sigma)
     {
         u1 = (double)rand() / RAND_MAX;
         u2 = (double)rand() / RAND_MAX;
-        r = u1 * u1 + u2 * u2;  
+        r = u1 * u1 + u2 * u2;
     } while (r > 1 || r == 0 || u1 == 1 || u2 == 1);
     z = sqrt(-2.0 * log(u1)) * cos(2.0 * PI * u2);
     return z * sigma + mu;
@@ -1100,6 +1101,33 @@ void VelocityMaxWell(double temperature)
     }
 }
 
+void ZeroMomentum()
+{
+    int i, d;
+    double momentum[3] = {0, 0, 0};
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            momentum[d] += atoms[i].velocity[d] * typeMasses[atoms[i].type];
+        }
+    }
+
+    for (d = 0; d < 3; d++)
+    {
+        momentum[d] /= atomNumber;
+    }
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].velocity[d] -= momentum[d] / typeMasses[atoms[i].type];
+        }
+    }
+}
+
 /* main */
 int main()
 {
@@ -1110,24 +1138,32 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    /* processing */
+    /* processing & output*/
     ConstructStdCrystal_BCC(3.14, 20);
     double temperature;
     temperature = 300;
     VelocityMaxWell(temperature);
 
-    /* Output */
-    int i;
-    double speed;
-    FILE *fp;
-    fp = fopen("velocity_maxwell.txt", "w");
-    fprintf(fp, "velocity_x speed\n");
+    int i,d;
+    double totalMomentum[3] = {0, 0, 0};
     for (i = 0; i < atomNumber; i++)
-    {     
-        speed = sqrt(atoms[i].velocity[0] * atoms[i].velocity[0] + atoms[i].velocity[1] * atoms[i].velocity[1] + atoms[i].velocity[2] * atoms[i].velocity[2]);
-        fprintf(fp, "%f %f\n", atoms[i].velocity[0], speed);
+    {
+        for(d = 0;d<3;d++)
+        {
+            totalMomentum[d] += atoms[i].velocity[d] * typeMasses[atoms[i].type];
+        }
     }
-    fclose(fp);
+    printf("Total totalMomentum before correction (x,y,z): %f %f %f\n", totalMomentum[0], totalMomentum[1], totalMomentum[2]);
+    ZeroMomentum();
+    totalMomentum[0] = 0; totalMomentum[1] = 0; totalMomentum[2] = 0;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for(d = 0;d<3;d++)
+        {
+            totalMomentum[d] += atoms[i].velocity[d] * typeMasses[atoms[i].type];
+        }
+    }
+    printf("Total totalMomentum after correction (x,y,z): %f %f %f\n", totalMomentum[0], totalMomentum[1], totalMomentum[2]);
 
     return 0;
 }
