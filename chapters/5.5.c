@@ -193,6 +193,7 @@ void ZeroMomentum();
 void InitVelocity(double temperature);
 void Dynamics(double stopTime, double timeStep);
 void IterRun();
+void IterRun_Euler(double timeStep);
 
 /* functions */
 void ConstructReducedLattice()
@@ -1175,6 +1176,19 @@ void Dynamics(double stopTime, double timeStep)
         IterRun(timeStep);
         nStep += 1;
         time += timeStep;
+    }
+}
+
+void IterRun_Euler(double timeStep)
+{
+    int i, d;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].r[d] += atoms[i].velocity[d] * timeStep;
+            atoms[i].velocity[d] += atoms[i].acceleration[d] * timeStep;
+        }
     }
 }
 

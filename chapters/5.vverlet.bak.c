@@ -193,6 +193,9 @@ void ZeroMomentum();
 void InitVelocity(double temperature);
 void Dynamics(double stopTime, double timeStep);
 void IterRun();
+void IterRun_Euler();
+void IterRun_Verlet();
+void IterRun_VelocityVerlet();
 
 /* functions */
 void ConstructReducedLattice()
@@ -1155,27 +1158,137 @@ void IterRun(double timeStep)
         IterRun_VelocityVerlet(timeStep);
 }
 
+void IterRun_Euler(double timeStep)
+{
+    int i, d;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].r[d] += atoms[i].velocity[d] * timeStep;
+            atoms[i].velocity[d] += atoms[i].acceleration[d] * timeStep;
+        }
+    }
+}
+
+void IterRun_Verlet(double timeStep)
+{
+    int i, d;
+    double r_tmp;
+    if (nStep == 0)
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].lastR_verlet[d] = atoms[i].r[d];
+                atoms[i].r[d] += atoms[i].velocity[d] * timeStep + 0.5 * atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                r_tmp = atoms[i].r[d];
+                atoms[i].r[d] = 2 * atoms[i].r[d] - atoms[i].lastR_verlet[d] + atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].lastR_verlet[d] = r_tmp;
+                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+}
+
+void IterRun_VelocityVerlet(double timeStep)
+{
+    int i, d;
+    if (nStep == 0)
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].r[d] += atoms[i].velocity[d] * timeStep + 0.5 * atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].lastAcceleration_vverlet[d] = atoms[i].acceleration[d];
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].velocity[d] += 0.5 * (atoms[i].lastAcceleration_vverlet[d] + atoms[i].acceleration[d]) * timeStep;
+                atoms[i].r[d] += atoms[i].velocity[d] * timeStep + 0.5 * atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].lastAcceleration_vverlet[d] = atoms[i].acceleration[d];
+            }
+        }
+    }
+}
+
+double CalculateTotalKineticEnergy()
+{
+    int n,d;
+    double e;
+    e = 0;
+    for (n =0; n<atomNumber; n++)
+    {
+        for (d =0; d<3; d++)
+        {
+            e += atoms[n].velocity[d] * atoms[n].velocity[d] * 0.5 * typeMasses[atoms[n].type];
+        }
+    }
+    return e;
+}
+
 void Dynamics(double stopTime, double timeStep)
 {
     double time;
-    int n, d;
+    int i, d;
 
+    double totalEnergy;
+    double deltaR, deltaV;
+
+    time = 0;
+    nStep = 0;
+
+    Dump_lammpstrj("dumps/run.dump", 1, nStep);
     while (time <= stopTime)
     {
         PBC_r();
         NeighborList(0);
         Potential(0, 1);
-        for (n = 0; n < atomNumber; n++)
+        for (i = 0; i < atomNumber; i++)
         {
             for (d = 0; d < 3; d++)
             {
-                atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type];
+                atoms[i].acceleration[d] = atoms[i].force[d] / typeMasses[atoms[i].type];
             }
         }
         IterRun(timeStep);
         nStep += 1;
         time += timeStep;
+        
+        if (nStep % 1000 == 0)
+        {
+            Dump_lammpstrj("dumps/run.dump", 0, nStep);
+            PBC_r();
+            NeighborList(0);
+            Potential(1, 0);
+            totalEnergy = totalPotentialEnergy + CalculateTotalKineticEnergy();
+        }
+        if (nStep % 1000 == 0)
+        {
+            deltaR = atoms[1].r[0] - atoms[0].r[0] - 3.1;
+            deltaV = atoms[1].velocity[0] - atoms[0].velocity[0];
+            printf("%f %f\n", time, deltaR);
+        }
     }
+    Dump_lammpstrj("dumps/run.dump", 0, nStep);
 }
 
 /* main */

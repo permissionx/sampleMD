@@ -193,6 +193,8 @@ void ZeroMomentum();
 void InitVelocity(double temperature);
 void Dynamics(double stopTime, double timeStep);
 void IterRun();
+void IterRun_Euler(double timeStep);
+void IterRun_Verlet(double timeStep);
 
 /* functions */
 void ConstructReducedLattice()
@@ -1177,6 +1179,51 @@ void Dynamics(double stopTime, double timeStep)
         time += timeStep;
     }
 }
+
+void IterRun_Euler(double timeStep)
+{
+    int i, d;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].r[d] += atoms[i].velocity[d] * timeStep;
+            atoms[i].velocity[d] += atoms[i].acceleration[d] * timeStep;
+        }
+    }
+}
+
+void IterRun_Verlet(double timeStep)
+{
+    int i, d;
+    double r_tmp;
+    if (nStep == 0)
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].lastR_verlet[d] = atoms[i].r[d];
+                atoms[i].r[d] += atoms[i].velocity[d] * timeStep + 0.5 * atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                r_tmp = atoms[i].r[d];
+                atoms[i].r[d] = 2 * atoms[i].r[d] - atoms[i].lastR_verlet[d] + atoms[i].acceleration[d] * timeStep * timeStep;
+                atoms[i].lastR_verlet[d] = r_tmp;
+                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+}
+
 
 /* main */
 int main()
