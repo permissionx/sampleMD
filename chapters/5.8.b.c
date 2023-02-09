@@ -111,7 +111,7 @@ struct Atom
     // Verlet
     double lastR_verlet[3];
     // Velocity Verlet
-    double lastAcceleration_vverlet[3];
+    double lastA_vverlet[3];
 };
 
 /* global variables */
@@ -194,9 +194,9 @@ void InitVelocity(double temperature);
 void Dynamics(double stopTime, double timeStep);
 void IterRun();
 void ComputeAcceleration();
-void IterRun_Euler();
-void IterRun_Verlet();
-void IterRun_VelocityVerlet();
+void IterRun_Euler(double timeStep);
+void IterRun_Verlet(double timeStep);
+void IterRun_VelocityVerlet(double timeStep);
 
 /* functions */
 void ConstructReducedLattice()
@@ -1155,12 +1155,31 @@ void IterRun(double timeStep)
     else if (strcmp(dynamicStyle, "Verlet") == 0)
         IterRun_Verlet(timeStep);
     else if (strcmp(dynamicStyle, "VelocityVerlet") == 0)
-        IterRun_VelocityVerlet(timeStep);
+        ;
+    // IterRun_VelocityVerlet(timeStep);
+}
+
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+
+    while (time <= stopTime)
+    {
+        IterRun(timeStep);
+        PBC_r();
+        nStep += 1;
+        time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            printf("%d %f\n", nStep, time);
+        }
+    }
 }
 
 void ComputeAcceleration()
 {
-    int n,d;
+    int n, d;
     NeighborList(0);
     Potential(0, 1);
     for (n = 0; n < atomNumber; n++)
@@ -1190,6 +1209,8 @@ void IterRun_Verlet(double timeStep)
 {
     int n, d;
     double r_tmp;
+
+    ComputeAcceleration();
     if (nStep == 0)
     {
         for (n = 0; n < atomNumber; n++)
@@ -1222,79 +1243,33 @@ void IterRun_VelocityVerlet(double timeStep)
     int n, d;
     if (nStep == 0)
     {
+        ComputeAcceleration();
         for (n = 0; n < atomNumber; n++)
         {
             for (d = 0; d < 3; d++)
             {
-                atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
-                atoms[n].lastAcceleration_vverlet[d] = atoms[n].acceleration[d];
+                atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
             }
         }
     }
-    else
-    {
-        for (n = 0; n < atomNumber; n++)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                atoms[n].velocity[d] += 0.5 * (atoms[n].lastAcceleration_vverlet[d] + atoms[n].acceleration[d]) * timeStep;
-                atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
-                atoms[n].lastAcceleration_vverlet[d] = atoms[n].acceleration[d];
-            }
-        }
-    }
-}
-
-double CalculateTotalKineticEnergy()
-{
-    int n, d;
-    double e;
-    e = 0;
     for (n = 0; n < atomNumber; n++)
     {
         for (d = 0; d < 3; d++)
         {
-            e += atoms[n].velocity[d] * atoms[n].velocity[d] * 0.5 * typeMasses[atoms[n].type];
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
         }
     }
-    return e;
-}
-
-void Dynamics(double stopTime, double timeStep)
-{
-    double time;
-    int i, d;
-
-    double totalEnergy;
-    double deltaR, deltaV;
-
-    time = 0;
-    nStep = 0;
-
-    Dump_lammpstrj("dumps/run.dump", 1, nStep);
-    while (time <= stopTime)
+    PBC_r();
+    ComputeAcceleration();
+    for (n = 0; n < atomNumber; n++)
     {
-        IterRun(timeStep);
-        PBC_r();
-        nStep += 1;
-        time += timeStep;
-
-        if (nStep % 1000 == 0)
+        for (d = 0; d < 3; d++)
         {
-            Dump_lammpstrj("dumps/run.dump", 0, nStep);
-            PBC_r();
-            NeighborList(0);
-            Potential(1, 0);
-            totalEnergy = totalPotentialEnergy + CalculateTotalKineticEnergy();
-        }
-        if (nStep % 1000 == 0)
-        {
-            deltaR = atoms[1].r[0] - atoms[0].r[0] - 3.1;
-            deltaV = atoms[1].velocity[0] - atoms[0].velocity[0];
-            printf("%f %f\n", time, deltaR);
+            atoms[n].velocity[d] += 0.5 * (atoms[n].acceleration[d] + atoms[n].lastA_vverlet[d]) * timeStep;
+            atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
         }
     }
-    Dump_lammpstrj("dumps/run.dump", 0, nStep);
+    
 }
 
 /* main */

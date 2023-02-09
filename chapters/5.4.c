@@ -1155,6 +1155,7 @@ void IterRun(double timeStep)
         IterRun_VelocityVerlet(timeStep);
 }
 
+
 void Dynamics(double stopTime, double timeStep)
 {
     double time;
@@ -1162,19 +1163,13 @@ void Dynamics(double stopTime, double timeStep)
 
     while (time <= stopTime)
     {
-        PBC_r();
-        NeighborList(0);
-        Potential(0, 1);
-        for (n = 0; n < atomNumber; n++)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type];
-            }
-        }
         IterRun(timeStep);
         nStep += 1;
         time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            printf("%d %f\n", nStep, time);
+        }
     }
 }
 

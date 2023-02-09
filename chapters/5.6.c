@@ -110,8 +110,6 @@ struct Atom
     double acceleration[3];
     // Verlet
     double lastR_verlet[3];
-    // Velocity Verlet
-    double lastAcceleration_vverlet[3];
 };
 
 /* global variables */
@@ -193,6 +191,7 @@ void ZeroMomentum();
 void InitVelocity(double temperature);
 void Dynamics(double stopTime, double timeStep);
 void IterRun();
+void ComputeAcceleration();
 void IterRun_Euler(double timeStep);
 void IterRun_Verlet(double timeStep);
 
@@ -1146,7 +1145,6 @@ void InitVelocity(double temperature)
     ZeroMomentum();
 }
 
-
 void IterRun(double timeStep)
 {
     if (strcmp(dynamicStyle, "Euler") == 0)
@@ -1164,66 +1162,78 @@ void Dynamics(double stopTime, double timeStep)
 
     while (time <= stopTime)
     {
-        PBC_r();
-        NeighborList(0);
-        Potential(0, 1);
-        for (n = 0; n < atomNumber; n++)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type];
-            }
-        }
         IterRun(timeStep);
         nStep += 1;
         time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            printf("%d %f\n", nStep, time);
+        }
+    }
+}
+
+void ComputeAcceleration()
+{
+    int n, d;
+    NeighborList(0);
+    Potential(0, 1);
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type];
+        }
     }
 }
 
 void IterRun_Euler(double timeStep)
 {
-    int i, d;
-    for (i = 0; i < atomNumber; i++)
+    int n, d;
+    ComputeAcceleration();
+    for (n = 0; n < atomNumber; n++)
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[i].r[d] += atoms[i].velocity[d] * timeStep;
-            atoms[i].velocity[d] += atoms[i].acceleration[d] * timeStep;
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep;
+            atoms[n].velocity[d] += atoms[n].acceleration[d] * timeStep;
         }
     }
+    PBC_r();
 }
 
 void IterRun_Verlet(double timeStep)
 {
-    int i, d;
+    int n, d;
     double r_tmp;
+
+    ComputeAcceleration();
     if (nStep == 0)
     {
-        for (i = 0; i < atomNumber; i++)
+        for (n = 0; n < atomNumber; n++)
         {
             for (d = 0; d < 3; d++)
             {
-                atoms[i].lastR_verlet[d] = atoms[i].r[d];
-                atoms[i].r[d] += atoms[i].velocity[d] * timeStep + 0.5 * atoms[i].acceleration[d] * timeStep * timeStep;
-                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+                atoms[n].lastR_verlet[d] = atoms[n].r[d];
+                atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
+                atoms[n].velocity[d] = (atoms[n].r[d] - atoms[n].lastR_verlet[d]) / timeStep;
             }
         }
     }
     else
     {
-        for (i = 0; i < atomNumber; i++)
+        for (n = 0; n < atomNumber; n++)
         {
             for (d = 0; d < 3; d++)
             {
-                r_tmp = atoms[i].r[d];
-                atoms[i].r[d] = 2 * atoms[i].r[d] - atoms[i].lastR_verlet[d] + atoms[i].acceleration[d] * timeStep * timeStep;
-                atoms[i].lastR_verlet[d] = r_tmp;
-                atoms[i].velocity[d] = (atoms[i].r[d] - atoms[i].lastR_verlet[d]) / timeStep;
+                r_tmp = atoms[n].r[d];
+                atoms[n].r[d] = 2 * atoms[n].r[d] - atoms[n].lastR_verlet[d] + atoms[n].acceleration[d] * timeStep * timeStep;
+                atoms[n].lastR_verlet[d] = r_tmp;
+                atoms[n].velocity[d] = (atoms[n].r[d] - atoms[n].lastR_verlet[d]) / timeStep;
             }
         }
     }
+    PBC_r();
 }
-
 
 /* main */
 int main()
@@ -1239,10 +1249,10 @@ int main()
     potentialCutoff_LJ = 5;
     neighborCutoff = 5;
     neighborInterval = 50;
-    strcpy(dynamicStyle,"VelocityVerlet");
+    strcpy(dynamicStyle, "Euler");
 
-    /* processing*/ 
-    ConstructStdCrystal_BCC(3,10);
+    /* processing*/
+    ConstructStdCrystal_BCC(3, 10);
     atomNumber = 2;
     atoms[0].r[0] = 10;
     atoms[0].r[1] = 0;
@@ -1251,7 +1261,6 @@ int main()
     atoms[1].r[1] = 0;
     atoms[1].r[2] = 0;
 
-    
     InitVelocity(0);
     Dynamics(100, 0.001);
 

@@ -13,17 +13,8 @@ void Dynamics(double stopTime, double timeStep)
     time = 0;
     while (time <= stopTime)
     {
-        PBC_r();
-        NeighborList(0);
-        Potential(0, 1);
-        for (n = 0; n < atomNumber; n++)
-        {
-            for (d = 0; d < 3; d++)
-            {
-                atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type];
-            }
-        }
         IterRun(timeStep);
+        PBC_r();
         nStep += 1;
         time += timeStep;
     }
