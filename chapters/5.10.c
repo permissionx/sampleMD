@@ -1269,7 +1269,7 @@ void Dynamics(double stopTime, double timeStep)
     NeighborList(0);
     Potential(1, 0);
     totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
-    printf("%d %f %f\n",0, 0.0, totalEnergy);
+    printf("%d %f %f\n", 0, 0.0, totalEnergy);
 
     time = 0;
     nStep = 0;
@@ -1284,7 +1284,7 @@ void Dynamics(double stopTime, double timeStep)
             NeighborList(0);
             Potential(1, 0);
             totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
-            printf("%d %f %f\n",nStep, time, totalEnergy);
+            printf("%d %f %f\n", nStep, time, totalEnergy);
         }
     }
 }
@@ -1307,7 +1307,7 @@ double ComputeTemperature()
 {
     double Ek, T;
     Ek = ComputeTotalKineticEnergy();
-    T = 2/3/K_B/atomNumber*Ek;
+    T = 2. / 3. / K_B / atomNumber * Ek;
     return T;
 }
 
@@ -1330,6 +1330,6 @@ int main()
     ConstructStdCrystal_BCC(3.14, 10);
     InitVelocity(300);
     Dynamics(1, 0.001);
-  
+
     return 0;
 }
