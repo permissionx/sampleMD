@@ -54,3 +54,4 @@ dkms.conf
 # Dump files
 *.xyz
 *.dump
+*.lammpstrj
