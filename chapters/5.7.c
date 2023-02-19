@@ -1155,27 +1155,9 @@ void IterRun(double timeStep)
     else if (strcmp(dynamicStyle, "Verlet") == 0)
         IterRun_Verlet(timeStep);
     else if (strcmp(dynamicStyle, "VelocityVerlet") == 0)
-        ;
-    // IterRun_VelocityVerlet(timeStep);
+        IterRun_VelocityVerlet(timeStep);
 }
 
-void Dynamics(double stopTime, double timeStep)
-{
-    double time;
-    int n, d;
-
-    while (time <= stopTime)
-    {
-        IterRun(timeStep);
-        PBC_r();
-        nStep += 1;
-        time += timeStep;
-        if (nStep % 100 == 0)
-        {
-            printf("%d %f\n", nStep, time);
-        }
-    }
-}
 
 void ComputeAcceleration()
 {
@@ -1203,6 +1185,7 @@ void IterRun_Euler(double timeStep)
             atoms[n].velocity[d] += atoms[n].acceleration[d] * timeStep;
         }
     }
+    PBC_r();
 }
 
 void IterRun_Verlet(double timeStep)
@@ -1236,6 +1219,7 @@ void IterRun_Verlet(double timeStep)
             }
         }
     }
+    PBC_r();
 }
 
 void IterRun_VelocityVerlet(double timeStep)
@@ -1272,6 +1256,28 @@ void IterRun_VelocityVerlet(double timeStep)
     
 }
 
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double dx, dv;
+
+    time = 0;
+    nStep = 0;
+    while (time <= stopTime)
+    {
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            dx = atoms[1].r[0] - atoms[0].r[0] - 3.076;
+            dv = atoms[1].velocity[0] - atoms[0].velocity[0];
+            printf("%d %f %f %f\n", nStep, time, dx, dv);
+        }
+    }
+}
+
 /* main */
 int main()
 {
@@ -1280,13 +1286,13 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    typeMasses[1] = 183.85;
+    typeMasses[1] = 20.1797;
     InitMassUnit();
     strcpy(potentialName, "LJ");
     potentialCutoff_LJ = 5;
     neighborCutoff = 5;
     neighborInterval = 50;
-    strcpy(dynamicStyle, "VelocityVerlet");
+    strcpy(dynamicStyle, "Euler");
 
     /* processing*/
     ConstructStdCrystal_BCC(3, 10);
@@ -1299,7 +1305,7 @@ int main()
     atoms[1].r[2] = 0;
 
     InitVelocity(0);
-    Dynamics(100, 0.001);
+    Dynamics(30, 0.0005);
 
     return 0;
 }

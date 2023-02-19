@@ -55,4 +55,5 @@ void IterRun_Verlet(double timeStep)
             }
         }
     }
+    PBC_r();
 }

@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.in": "lammps",
+        "in": "lmps",
+        "stdlib.h": "c",
+        "iterator": "c"
+    }
+}

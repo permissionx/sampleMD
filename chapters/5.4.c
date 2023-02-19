@@ -1161,6 +1161,8 @@ void Dynamics(double stopTime, double timeStep)
     double time;
     int n, d;
 
+    time = 0;
+    nStep = 0;
     while (time <= stopTime)
     {
         IterRun(timeStep);

@@ -29,4 +29,5 @@ void IterRun_Euler(double timeStep)
             atoms[n].velocity[d] += atoms[n].acceleration[d] * timeStep;
         }
     }
+    PBC_r();
 }

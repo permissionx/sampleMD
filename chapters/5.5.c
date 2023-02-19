@@ -1159,6 +1159,8 @@ void Dynamics(double stopTime, double timeStep)
     double time;
     int n, d;
 
+    time = 0;
+    nStep = 0;
     while (time <= stopTime)
     {
         IterRun(timeStep);
@@ -1208,16 +1210,16 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    typeMasses[1] = 183.85;
+    typeMasses[1] = 20.1797;
     InitMassUnit();
     strcpy(potentialName, "LJ");
     potentialCutoff_LJ = 5;
     neighborCutoff = 5;
     neighborInterval = 50;
-    strcpy(dynamicStyle,"Euler");
+    strcpy(dynamicStyle, "Euler");
 
-    /* processing*/ 
-    ConstructStdCrystal_BCC(3,10);
+    /* processing*/
+    ConstructStdCrystal_BCC(3, 10);
     atomNumber = 2;
     atoms[0].r[0] = 10;
     atoms[0].r[1] = 0;
@@ -1226,9 +1228,8 @@ int main()
     atoms[1].r[1] = 0;
     atoms[1].r[2] = 0;
 
-    
     InitVelocity(0);
-    Dynamics(100, 0.001);
+    Dynamics(30, 0.0005);
 
     return 0;
 }

@@ -1160,6 +1160,8 @@ void Dynamics(double stopTime, double timeStep)
     double time;
     int n, d;
 
+    time = 0;
+    nStep = 0;
     while (time <= stopTime)
     {
         IterRun(timeStep);
@@ -1243,7 +1245,7 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    typeMasses[1] = 183.85;
+    typeMasses[1] = 20.1797;
     InitMassUnit();
     strcpy(potentialName, "LJ");
     potentialCutoff_LJ = 5;
@@ -1262,7 +1264,7 @@ int main()
     atoms[1].r[2] = 0;
 
     InitVelocity(0);
-    Dynamics(100, 0.001);
+    Dynamics(30, 0.0005);
 
     return 0;
 }
