@@ -1319,12 +1319,12 @@ void ComputeStress(double stress[6])
     Potential(0, 1);
     for (n = 0; n < atomNumber; n++)
     {
-        stress[0] += -atoms[n].force[0] * atoms[n].r[0] - atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
-        stress[1] += -atoms[n].force[1] * atoms[n].r[1] - atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[2] += -atoms[n].force[2] * atoms[n].r[2] - atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[3] += -atoms[n].force[0] * atoms[n].r[1] - atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[4] += -atoms[n].force[0] * atoms[n].r[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[5] += -atoms[n].force[1] * atoms[n].r[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[0] += atoms[n].force[0] * atoms[n].r[0] + atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
+        stress[1] += atoms[n].force[1] * atoms[n].r[1] + atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[2] += atoms[n].force[2] * atoms[n].r[2] + atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[3] += atoms[n].force[0] * atoms[n].r[1] + atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[4] += atoms[n].force[0] * atoms[n].r[2] + atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[5] += atoms[n].force[1] * atoms[n].r[2] + atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
     }
     for (i = 0; i < 3; i++)
     {
@@ -1338,7 +1338,7 @@ void ComputeStress(double stress[6])
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
-        stress[d] *= 160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
+        stress[d] *= -160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
     }
 }
 
@@ -1450,22 +1450,22 @@ void ComputeStress_(double stress[6])
             }
         }
     }
-    stress[0] = -(boxForce[0][0] - sumAtomForce[0][0]) * boxTranVecs[0][0];
-    stress[1] = -(boxForce[1][1] - sumAtomForce[1][1]) * boxTranVecs[1][1];
-    stress[2] = -(boxForce[2][2] - sumAtomForce[2][2]) * boxTranVecs[2][2];
-    stress[3] = -(boxForce[0][1] - sumAtomForce[0][1]) * boxTranVecs[0][0];
-    stress[4] = -(boxForce[0][2] - sumAtomForce[0][2]) * boxTranVecs[0][0];
-    stress[5] = -(boxForce[1][2] - sumAtomForce[1][2]) * boxTranVecs[1][1];
+    stress[0] = boxTranVecs[0][0] * (boxForce[0][0] - sumAtomForce[0][0]);
+    stress[1] = boxTranVecs[1][1] * (boxForce[1][1] - sumAtomForce[1][1]);
+    stress[2] = boxTranVecs[2][2] * (boxForce[2][2] - sumAtomForce[2][2]);
+    stress[3] = boxTranVecs[0][0] * (boxForce[0][1] - sumAtomForce[0][1]);
+    stress[4] = boxTranVecs[0][0] * (boxForce[0][2] - sumAtomForce[0][2]);
+    stress[5] = boxTranVecs[1][1] * (boxForce[1][2] - sumAtomForce[1][2]);
 
     // add atom virial
     for (n = 0; n < atomNumber; n++)
     {
-        stress[0] += -atoms[n].r[0] * atoms[n].force[0] - atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
-        stress[1] += -atoms[n].r[1] * atoms[n].force[1] - atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[2] += -atoms[n].r[2] * atoms[n].force[2] - atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[3] += -atoms[n].r[0] * atoms[n].force[1] - atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[4] += -atoms[n].r[0] * atoms[n].force[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[5] += -atoms[n].r[1] * atoms[n].force[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[0] += atoms[n].r[0] * atoms[n].force[0] + atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
+        stress[1] += atoms[n].r[1] * atoms[n].force[1] + atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[2] += atoms[n].r[2] * atoms[n].force[2] + atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[3] += atoms[n].r[0] * atoms[n].force[1] + atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[4] += atoms[n].r[0] * atoms[n].force[2] + atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[5] += atoms[n].r[1] * atoms[n].force[2] + atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
     }
     
 
@@ -1473,7 +1473,7 @@ void ComputeStress_(double stress[6])
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
-        stress[d] *= 160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
+        stress[d] *= -160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
     }
 }
 

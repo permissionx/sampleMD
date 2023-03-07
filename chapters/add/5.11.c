@@ -1,64 +1,9 @@
-// stress 
-
 /* function declarations */
-void VirialPair(int n, double virial[6]);
-void VirialPair_LJ(int n, double virial[6]);
 double ComputeBoxVolume();
+void ComputeNonPBCForce(double nonPBCForce[3][3]);
 void ComputeStress(double stress[6]);
 
 /* functions */
-void VirialPair(int n, double virial[6])
-{
-    // result unit: eV
-    NeighborList(0);
-    if (strcmp(potentialName, "LJ") == 0)
-    {
-        VirialPair_LJ(n, virial);
-    }
-    else
-    {
-        printf("Error: Calculating Virial pair for potential %s is not supported.\n", potentialName);
-        exit(1);
-    }
-}
-
-void VirialPair_LJ(int n, double virial[6])
-{
-    int l, d;
-    double sigma6;
-    double distance, distance8, distance14;
-    double x;
-    double force[3];
-    for (d = 0; d < 6; d++)
-    {
-        virial[d] = 0;
-    }
-    for (l = 0; l < atoms[n].neighborNumber; l++)
-    {
-        distance = atoms[n].neighbors[l].distance;
-        distance8 = pow(distance, 8);
-        distance14 = pow(distance, 14);
-        for (d = 0; d < 3; d++)
-        {
-            x = atoms[n].neighbors[l].dr[d];
-            force[d] = (LJ_2_SIGMA_6 * x / distance14 - x / distance8);
-        }
-        for (d = 0; d < 6; d++)
-        {
-            virial[0] += atoms[n].neighbors[l].dr[0] * force[0]; // xx
-            virial[1] += atoms[n].neighbors[l].dr[1] * force[1]; // yy
-            virial[2] += atoms[n].neighbors[l].dr[2] * force[2]; // zz
-            virial[3] += atoms[n].neighbors[l].dr[0] * force[1]; // xy
-            virial[4] += atoms[n].neighbors[l].dr[0] * force[2]; // xz
-            virial[5] += atoms[n].neighbors[l].dr[1] * force[2]; // yz
-        }
-    }
-    for (d = 0; d < 6; d++)
-    {
-        virial[d] *= -0.5 * LJ_24_EPSILON_SIGMA_6;
-    }
-}
-
 double ComputeBoxVolume()
 {
     double areaVector[3];
@@ -66,33 +11,93 @@ double ComputeBoxVolume()
     return VecDotMul(areaVector, boxTranVecs[2]);
 }
 
+
+void ComputeNonPBCForce(double nonPBCForce[3][3])
+{
+    int n, i, j;
+    for (i = 0; i < 3; i++)
+    {
+        boxTranVecs[i][i] *= 2;
+        NeighborList(1);
+        Potential(0, 1);
+        for (j = 0; j < 3; j++)
+        {
+            nonPBCForce[i][j] = 0;
+        }
+        for (n = 0; n < atomNumber; n++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 4)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                    nonPBCForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+        boxTranVecs[i][i] /= 2;
+    }
+}
+
 void ComputeStress(double stress[6])
 {
-    //result unit: GPa
-    int n, l, d;
-    double ke[6], virial[6];
+    int n, d, i, j;
     double volume;
-    for (d = 0; d < 6; d++)
+    double nonPBCForce[3][3], sumAtomForce[3][3];
+    // only for orthogonal box with start point on (0,0,0)
+    if (boxPerpendicular != 1 )
     {
-        stress[d] = 0;
+        printf("Error: computing stress in wrong box, check function ComputeStress()\n");
+        exit(1);
     }
-    for (n = 0; n < atomNumber; n++)
+
+    // box virial
+    ComputeNonPBCForce(nonPBCForce);
+    NeighborList(1);
+    Potential(0, 1);
+    for (i = 0; i < 3; i++)
     {
-        ke[0] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[0]; // xx
-        ke[1] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[1]; // yy
-        ke[2] = -typeMasses[atoms[n].type] * atoms[n].velocity[2] * atoms[n].velocity[2]; // zz
-        ke[3] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[1]; // xy
-        ke[4] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[2]; // xz
-        ke[5] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[2]; // yz
-        VirialPair(n, virial);
-        for (d = 0; d < 6; d++)
+        for (j = 0; j < 3; j++)
         {
-            stress[d] += ke[d] + virial[d];
+            sumAtomForce[i][j] = 0;
         }
     }
+
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 2)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                     sumAtomForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+    }
+    stress[0] = boxTranVecs[0][0] * (nonPBCForce[0][0] - sumAtomForce[0][0]);
+    stress[1] = boxTranVecs[1][1] * (nonPBCForce[1][1] - sumAtomForce[1][1]);
+    stress[2] = boxTranVecs[2][2] * (nonPBCForce[2][2] - sumAtomForce[2][2]);
+    stress[3] = boxTranVecs[0][0] * (nonPBCForce[0][1] - sumAtomForce[0][1]);
+    stress[4] = boxTranVecs[0][0] * (nonPBCForce[0][2] - sumAtomForce[0][2]);
+    stress[5] = boxTranVecs[1][1] * (nonPBCForce[1][2] - sumAtomForce[1][2]);
+
+    // add atom virial and ke
+    for (n = 0; n < atomNumber; n++)
+    {
+        stress[0] += atoms[n].r[0] * atoms[n].force[0] + atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
+        stress[1] += atoms[n].r[1] * atoms[n].force[1] + atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[2] += atoms[n].r[2] * atoms[n].force[2] + atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[3] += atoms[n].r[0] * atoms[n].force[1] + atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[4] += atoms[n].r[0] * atoms[n].force[2] + atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[5] += atoms[n].r[1] * atoms[n].force[2] + atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+    }
+    
+
+    // stress
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
-        stress[d] *= 160.21766208/volume;  // 1 eV/Angstrom3 = 160.21766208 GPa
+        stress[d] *= -160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
     }
 }
