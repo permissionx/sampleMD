@@ -113,6 +113,8 @@ struct Atom
     // Velocity Verlet
     double lastA_vverlet[3];
     double stress_Volume[6];
+    // stress
+    double force_save[3];
 };
 
 /* global variables */
@@ -203,6 +205,7 @@ double ComputeTotalKineticEnergy();
 double ComputeTemperature();
 double ComputeBoxVolume();
 void ComputeStress(double stress[6]);
+double ComputeViral_xx_PBC();
 
 /* functions */
 void ConstructReducedLattice()
@@ -591,7 +594,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
     fprintf(fp, "ITEM: ATOMS id type x y z pe fx fy fz vx vy vz\n");
     for (n = 0; n < atomNumber; n++)
     {
-        fprintf(fp, "%d %d %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f  %30.20f  %30.20f  %30.20f\n",
+        fprintf(fp, "%d %d %20.15f %20.15f %20.15f %20.15f %20.15f %20.15f %20.15f  %20.15f  %20.15f  %20.15f\n",
                 atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2],
                 atoms[n].potentialEnergy,
                 atoms[n].force[0], atoms[n].force[1], atoms[n].force[2],
@@ -1282,7 +1285,6 @@ double ComputeTemperature()
     return T;
 }
 
-
 double ComputeBoxVolume()
 {
     double areaVector[3];
@@ -1290,17 +1292,19 @@ double ComputeBoxVolume()
     return VecDotMul(areaVector, boxTranVecs[2]);
 }
 
-
 void ComputeStress(double stress[6])
 {
     int n, d;
     int i, j;
     double boxTranVecs_ori[3][3];
     double volume;
-    
-    for (i=0;i<3;i++)
+
+    NeighborList(0);
+    Potential(0, 1);
+
+    for (i = 0; i < 3; i++)
     {
-        for (j=0;j<3;j++)
+        for (j = 0; j < 3; j++)
         {
             boxTranVecs_ori[i][j] = boxTranVecs[i][j];
             boxTranVecs[i][j] *= 10;
@@ -1322,14 +1326,15 @@ void ComputeStress(double stress[6])
         stress[4] += -atoms[n].force[0] * atoms[n].r[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
         stress[5] += -atoms[n].force[1] * atoms[n].r[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
     }
-    for (i=0;i<3;i++)
+    for (i = 0; i < 3; i++)
     {
-        for (j=0;j<3;j++)
+        for (j = 0; j < 3; j++)
         {
             boxTranVecs[i][j] = boxTranVecs_ori[i][j];
         }
     }
     NeighborList(1);
+    Potential(0, 1);
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
@@ -1337,20 +1342,158 @@ void ComputeStress(double stress[6])
     }
 }
 
+double ComputeViral_xx_PBC() // equal static stress
+{
+    // only for orthogonal box
+    int n, d;
+    int i, j;
+    double volume;
+    double stress_self, stress_image;
+
+    stress_self = 0;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].force_save[d] = atoms[n].force[d];
+        }
+    }
+
+    for (n = 0; n < atomNumber; n++)
+    {
+        stress_self += -atoms[n].force[0] * atoms[n].r[0];
+    }
+    volume = ComputeBoxVolume();
+    stress_self /= volume;
+
+    // non-xx-pbc force
+    boxTranVecs[0][0] *= 2;
+    NeighborList(1);
+    Potential(0, 1);
+    stress_image = 0;
+    for (n = 0; n < atomNumber; n++)
+    {
+        if (atoms[n].r[0] >= boxTranVecs[0][0] / 4)
+        {
+            stress_image += (atoms[n].force_save[0] - atoms[n].force[0]);
+        }
+    }
+    boxTranVecs[0][0] /= 2;
+    NeighborList(1);
+    Potential(0, 1);
+
+    double area = boxTranVecs[1][1] * boxTranVecs[2][2];
+    stress_image /= area;
+    return (stress_self + stress_image) * 160.21766208;
+}
+
+void ComputeBoxForce(double boxForce[3][3])
+{
+    int n, i, j;
+    for (i = 0; i < 3; i++)
+    {
+        boxTranVecs[i][i] *= 2;
+        NeighborList(1);
+        Potential(0, 1);
+        for (j = 0; j < 3; j++)
+        {
+            boxForce[i][j] = 0;
+        }
+        for (n = 0; n < atomNumber; n++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 4)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                    boxForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+        boxTranVecs[i][i] /= 2;
+    }
+}
+
+void ComputeStress_(double stress[6])
+{
+    int n, d, i, j;
+    double volume;
+    double boxForce[3][3], sumAtomForce[3][3];
+    // only for orthogonal box with start point on (0,0,0)
+    if (boxPerpendicular != 1 || !(boxStartPoint[0] == 0 && boxStartPoint[1] == 0 && boxStartPoint[2] == 0))
+    {
+        printf("Error: computing stress in wrong box, check function ComputeStress()\n");
+        exit(1);
+    }
+
+    // box virial
+    ComputeBoxForce(boxForce);
+    NeighborList(1);
+    Potential(0, 1);
+    for (i = 0; i < 3; i++)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            sumAtomForce[i][j] = 0;
+        }
+    }
+
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 2)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                     sumAtomForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+    }
+    stress[0] = -(boxForce[0][0] - sumAtomForce[0][0]) * boxTranVecs[0][0];
+    stress[1] = -(boxForce[1][1] - sumAtomForce[1][1]) * boxTranVecs[1][1];
+    stress[2] = -(boxForce[2][2] - sumAtomForce[2][2]) * boxTranVecs[2][2];
+    stress[3] = -(boxForce[0][1] - sumAtomForce[0][1]) * boxTranVecs[0][0];
+    stress[4] = -(boxForce[0][2] - sumAtomForce[0][2]) * boxTranVecs[0][0];
+    stress[5] = -(boxForce[1][2] - sumAtomForce[1][2]) * boxTranVecs[1][1];
+
+    // add atom virial
+    for (n = 0; n < atomNumber; n++)
+    {
+        stress[0] += -atoms[n].r[0] * atoms[n].force[0] - atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
+        stress[1] += -atoms[n].r[1] * atoms[n].force[1] - atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[2] += -atoms[n].r[2] * atoms[n].force[2] - atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[3] += -atoms[n].r[0] * atoms[n].force[1] - atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[4] += -atoms[n].r[0] * atoms[n].force[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[5] += -atoms[n].r[1] * atoms[n].force[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+    }
+    
+
+    // stress
+    volume = ComputeBoxVolume();
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] *= 160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
+    }
+}
 
 void Dynamics(double stopTime, double timeStep)
 {
     double time;
     int n, d;
-    double temperature;
-    double stress[6];
+    double totalEnergy;
     char dumpName[30];
+
+    strcpy(dumpName, "bcc_run_5.9.a.lammpstrj");
+    Dump_lammpstrj(dumpName, 1, 0);
+    printf("step time totalEnergy\n");
+    NeighborList(0);
+    Potential(1, 0);
+    totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+    printf("%d %f %f\n", 0, 0.0, totalEnergy);
+
     time = 0;
     nStep = 0;
-    printf("step time temperature stress_xx\n");
-    temperature = ComputeTemperature();
-    ComputeStress(stress);
-    printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
     while (time <= stopTime)
     {
         IterRun(timeStep);
@@ -1358,9 +1501,11 @@ void Dynamics(double stopTime, double timeStep)
         time += timeStep;
         if (nStep % 100 == 0)
         {
-            temperature = ComputeTemperature();
-            ComputeStress(stress);
-            printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
+            Dump_lammpstrj(dumpName, 0, nStep);
+            NeighborList(0);
+            Potential(1, 0);
+            totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+            printf("%d %f %f\n", nStep, time, totalEnergy);
         }
     }
 }
@@ -1373,24 +1518,76 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    typeMasses[1] = 20.1797; // for Ne
+    typeMasses[1] = 183.84; // for W
     InitMassUnit();
-    strcpy(potentialName, "LJ");
-    potentialCutoff_LJ = 20;
-    neighborCutoff = 20;
+    strcpy(potentialName, "EAM");
+    neighborCutoff = 6;
     neighborInterval = 100;
     strcpy(dynamicStyle, "VelocityVerlet");
-
-    /* processing*/
-    double temperature;
-    for (temperature = 100; temperature <= 400; temperature += 50)
+    ConstructStdCrystal_BCC(3.2, 10);
+    InitVelocity(300.0);
+    Dynamics(0.1, 0.0005);
+    InitVelocity(0);
+    Dump_lammpstrj("dis.dump", 1, 0);
+    double stress[6];
+    // stress = ComputeViral_xx_PBC();
+    ComputeStress_(stress);
+    int d;
+    for (d = 0; d < 6; d++)
     {
-        printf("----Case for initial temperature of %f K----\n", temperature);
-        ConstructStdCrystal_FCC(4.23, 5);
-        InitVelocity(temperature);
-        Dynamics(1.0, 0.0005);
-        printf("----------\n\n");
+        printf("%f ", stress[d]);
     }
+    printf("\n");
 
+    double stress1 = ComputeViral_xx_PBC();
+    printf("%f ", stress1);
+
+    /*
+    double latticeConstant;
+    double stress;
+    double last_potential;
+    int d;
+    double delta;
+    printf("lc str_xx str_yy str_zz str_xy str_xz str_yz potential\n");
+    last_potential = 0;
+
+    for (latticeConstant = 3.05; latticeConstant < 3.241; latticeConstant += 0.01)
+    {
+        ConstructStdCrystal_BCC(latticeConstant, 10);
+        InitVelocity(0);
+        printf("%f ", latticeConstant);
+        stress = ComputeViral_xx_PBC();
+        printf("%f ", stress);
+        Potential(1, 0);
+        printf("%f\n", totalPotentialEnergy / atomNumber);
+        delta = (totalPotentialEnergy - last_potential) / boxTranVecs[0][0] / boxTranVecs[0][0] / 0.01 * 160.21766208;
+        // printf("gradient: %f\n", delta);
+        last_potential = totalPotentialEnergy;
+        nStep += 1;
+    }
+    */
+    /*
+     ConstructStdCrystal_BCC(3.24, 10);
+     stress = ComputeViral_xx_PBC();
+     printf("stress %f \n", stress);
+     NeighborList(1);
+     Potential(1,0);
+     printf("potential1 %f \n", totalPotentialEnergy);
+     double last_totalPotantialEnergy = totalPotentialEnergy;
+     int n;
+     for(n=0;n<atomNumber;n++)
+     {
+         atoms[n].r[0] *= 1.0000001;
+     }
+     boxTranVecs[0][0] *= 1.0000001;
+     NeighborList(1);
+     Potential(1,0);
+     printf("potential2 %f \n", totalPotentialEnergy);
+     double S = boxTranVecs[1][1] * boxTranVecs[2][2];
+     double gradient = (totalPotentialEnergy - last_totalPotantialEnergy)/boxTranVecs[1][1]/0.0000001/S* 160.21766208;
+     printf("gradient %f\n", gradient);
+     */
+    // InitVelocity(300);
+    // Dynamics(1, 0.001);
     return 0;
 }

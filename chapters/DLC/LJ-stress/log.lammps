@@ -1,0 +1,1662 @@
+LAMMPS (18 Sep 2018)
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.15
+Lattice spacing in x,y,z = 4.15 4.15 4.15
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (20.75 20.75 20.75)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000468016 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    1211.3337    1211.3337    1211.3337 -2.1637336e-12 -3.2809015e-12 -4.0504019e-12   -13.138428 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+209.7% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    490000 ave 490000 max 490000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 490000
+Ave neighs/atom = 980
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.1384277745895 -0.121133366675798
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.16
+Lattice spacing in x,y,z = 4.16 4.16 4.16
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (20.8 20.8 20.8)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000231028 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    1019.1676    1019.1676    1019.1676 2.8633742e-12 2.9559225e-12 2.467895e-12   -13.183453 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    490000 ave 490000 max 490000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 490000
+Ave neighs/atom = 980
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.1834532761926 -0.101916763606637
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.17
+Lattice spacing in x,y,z = 4.17 4.17 4.17
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (20.85 20.85 20.85)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000228167 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    837.43833    837.43833    837.43833 6.9276551e-13 -1.8142014e-12 -2.2911185e-12   -13.221107 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    490000 ave 490000 max 490000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 490000
+Ave neighs/atom = 980
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2211071381547 -0.0837438331995051
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.18
+Lattice spacing in x,y,z = 4.18 4.18 4.18
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (20.9 20.9 20.9)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.00022006 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    665.65293    665.65293    665.65293 -5.0615377e-13 -8.2904814e-13 -2.1734779e-12   -13.251733 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    490000 ave 490000 max 490000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 490000
+Ave neighs/atom = 980
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.251732566191 -0.0665652929533249
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.1899999999999995
+Lattice spacing in x,y,z = 4.19 4.19 4.19
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (20.95 20.95 20.95)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000200033 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    503.34138    503.34138    503.34138 8.3257067e-13 1.8208461e-12 1.5567658e-12   -13.275659 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+209.7% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2756587528736 -0.0503341383172154
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.199999999999999
+Lattice spacing in x,y,z = 4.2 4.2 4.2
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21 21 21)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000201941 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    350.05536    350.05536    350.05536 7.1458977e-13 1.4367324e-12 1.4038336e-12   -13.293201 
+Loop time of 0 on 1 procs for 0 steps with 500 atoms
+
+0.0% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 0          |            |       |  0.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2932014444919 -0.0350055358067902
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.209999999999999
+Lattice spacing in x,y,z = 4.21 4.21 4.21
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.05 21.05 21.05)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000200033 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    205.36721    205.36721    205.36721 2.0237549e-12 3.9384897e-12 4.1505787e-12   -13.304663 
+Loop time of 0 on 1 procs for 0 steps with 500 atoms
+
+0.0% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 0          |            |       |  0.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.3046634844703 -0.020536721283477
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.219999999999999
+Lattice spacing in x,y,z = 4.22 4.22 4.22
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.1 21.1 21.1)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000204086 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    69.703695    69.703695    69.703695 -6.4323661e-13 -8.3076316e-13 -7.4616417e-13   -13.307888 
+Loop time of 1.19209e-06 on 1 procs for 0 steps with 500 atoms
+
+83.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.192e-06  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.3078884065408 -0.0069703694709659
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.229999999999999
+Lattice spacing in x,y,z = 4.23 4.23 4.23
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.15 21.15 21.15)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.00020504 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -59.011227   -59.011227   -59.011227 -2.8759998e-16 9.482874e-14 -1.6893706e-13   -13.308083 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.308083149573 0.00590112269367192
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.239999999999998
+Lattice spacing in x,y,z = 4.24 4.24 4.24
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.2 21.2 21.2)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.00020504 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -180.29607   -180.29607   -180.29607 -5.0596107e-13 -6.6814739e-13 -1.0001175e-12   -13.303033 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.3030328914557 0.0180296072040763
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.249999999999998
+Lattice spacing in x,y,z = 4.25 4.25 4.25
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.25 21.25 21.25)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000203133 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -294.50495   -294.50495   -294.50495 -2.462267e-13 2.3740729e-13 -3.4788065e-13   -13.292994 
+Loop time of 5.00679e-06 on 1 procs for 0 steps with 500 atoms
+
+0.0% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.007e-06  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2929938738711 0.029450494578159
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.259999999999998
+Lattice spacing in x,y,z = 4.26 4.26 4.26
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.3 21.3 21.3)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000209808 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -401.97566   -401.97566   -401.97566 6.4452928e-13 1.7663616e-12 1.2068401e-12   -13.278212 
+Loop time of 1.19209e-06 on 1 procs for 0 steps with 500 atoms
+
+83.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.192e-06  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2782118337442 0.040197565701262
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.269999999999998
+Lattice spacing in x,y,z = 4.27 4.27 4.27
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.35 21.35 21.35)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000208855 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -502.86986   -502.86986   -502.86986 -2.8120045e-13 -9.9363484e-13 -6.9148649e-13   -13.258435 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+209.7% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    466000 ave 466000 max 466000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 466000
+Ave neighs/atom = 932
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2584346294197 0.0502869861983767
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.279999999999998
+Lattice spacing in x,y,z = 4.28 4.28 4.28
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.4 21.4 21.4)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000203133 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -597.81959   -597.81959   -597.81959 -8.7040921e-13 -5.1948729e-13 -1.5127347e-12   -13.234871 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    436000 ave 436000 max 436000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 436000
+Ave neighs/atom = 872
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2348706274559 0.0597819585388434
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.289999999999997
+Lattice spacing in x,y,z = 4.29 4.29 4.29
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.45 21.45 21.45)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.00020504 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -686.95411   -686.95411   -686.95411 -6.8414875e-14 2.2231658e-13 2.1886044e-13   -13.207242 
+Loop time of 0 on 1 procs for 0 steps with 500 atoms
+
+0.0% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 0          |            |       |  0.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    436000 ave 436000 max 436000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 436000
+Ave neighs/atom = 872
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.2072418094781 0.0686954110956769
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.299999999999997
+Lattice spacing in x,y,z = 4.3 4.3 4.3
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.5 21.5 21.5)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000204086 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -770.55328   -770.55328   -770.55328 -4.3006893e-13 -9.1954825e-13 -1.134957e-12   -13.175756 
+Loop time of 1.19209e-06 on 1 procs for 0 steps with 500 atoms
+
+83.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.192e-06  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    436000 ave 436000 max 436000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 436000
+Ave neighs/atom = 872
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.1757559464696 0.0770553283929531
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.309999999999997
+Lattice spacing in x,y,z = 4.31 4.31 4.31
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.55 21.55 21.55)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000203133 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0    -848.8841    -848.8841    -848.8841 1.7105288e-13 -1.034619e-12 -2.3550669e-12   -13.140612 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    436000 ave 436000 max 436000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 436000
+Ave neighs/atom = 872
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.1406122483391 0.0848884095352529
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.319999999999997
+Lattice spacing in x,y,z = 4.32 4.32 4.32
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.6 21.6 21.6)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000202894 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -921.42645   -921.42645   -921.42645 1.598278e-14 1.9225428e-13 -2.9696509e-14   -13.099565 
+Loop time of 1.19209e-06 on 1 procs for 0 steps with 500 atoms
+
+83.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 1.192e-06  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    436000 ave 436000 max 436000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 436000
+Ave neighs/atom = 872
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.0995648749942 0.0921426453728982
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.3299999999999965
+Lattice spacing in x,y,z = 4.33 4.33 4.33
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.65 21.65 21.65)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000204086 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -989.98899   -989.98899   -989.98899 -3.3026597e-13 9.6236746e-13 1.3498324e-12   -13.057704 
+Loop time of 9.53674e-07 on 1 procs for 0 steps with 500 atoms
+
+104.9% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.537e-07  |            |       |100.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    430000 ave 430000 max 430000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 430000
+Ave neighs/atom = 860
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.0577041648406 0.0989988994629301
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+lattice        fcc 4.339999999999996
+Lattice spacing in x,y,z = 4.34 4.34 4.34
+
+# Box & atoms
+region         box block 0 5 0 5 0 5
+create_box     1 box
+Created orthogonal box = (0 0 0) to (21.7 21.7 21.7)
+  1 by 1 by 1 MPI processor grid
+create_atoms   1 box
+Created 500 atoms
+  Time spent = 0.000202894 secs
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  update every 1 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 20.3
+  ghost atom cutoff = 20.3
+  binsize = 10.15, bins = 3 3 3
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair lj/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton
+      stencil: half/bin/3d/newton
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.273 | 5.273 | 5.273 Mbytes
+Step Pxx Pyy Pzz Pxy Pxz Pyz PotEng 
+       0   -1054.0125   -1054.0125   -1054.0125  9.02106e-14 -2.4916373e-12 -1.2582635e-12   -13.012735 
+Loop time of 0 on 1 procs for 0 steps with 500 atoms
+
+0.0% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 0          |            |       |  0.00
+
+Nlocal:    500 ave 500 max 500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    11694 ave 11694 max 11694 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    430000 ave 430000 max 430000 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 430000
+Ave neighs/atom = 860
+Neighbor list builds = 0
+Dangerous builds = 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+-13.0127347029583 0.105401245376487
+
+
+# Ending
+clear
+next           lc
+jump           SELF
+Total wall time: 0:00:00

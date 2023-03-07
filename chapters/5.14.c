@@ -201,8 +201,12 @@ void IterRun_Verlet(double timeStep);
 void IterRun_VelocityVerlet(double timeStep);
 double ComputeTotalKineticEnergy();
 double ComputeTemperature();
+void VirialPair(int n, double virial[6]);
+void VirialPair_LJ(int n, double virial[6]);
 double ComputeBoxVolume();
 void ComputeStress(double stress[6]);
+void Barostat(double targetPressure, double deltaTime, char algorithm[20]);
+void Barostat_Berendersen(double targetPressure, double deltaTime);
 
 /* functions */
 void ConstructReducedLattice()
@@ -1282,6 +1286,57 @@ double ComputeTemperature()
     return T;
 }
 
+void VirialPair(int n, double virial[6])
+{
+    // result unit: eV
+    NeighborList(0);
+    if (strcmp(potentialName, "LJ") == 0)
+    {
+        VirialPair_LJ(n, virial);
+    }
+    else
+    {
+        printf("Error: Calculating Virial pair for potential %s is not supported.\n", potentialName);
+        exit(1);
+    }
+}
+
+void VirialPair_LJ(int n, double virial[6])
+{
+    int l, d;
+    double sigma6;
+    double distance, distance8, distance14;
+    double x;
+    double force[3];
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] = 0;
+    }
+    for (l = 0; l < atoms[n].neighborNumber; l++)
+    {
+        distance = atoms[n].neighbors[l].distance;
+        distance8 = pow(distance, 8);
+        distance14 = pow(distance, 14);
+        for (d = 0; d < 3; d++)
+        {
+            x = atoms[n].neighbors[l].dr[d];
+            force[d] = (LJ_2_SIGMA_6 * x / distance14 - x / distance8);
+        }
+        for (d = 0; d < 6; d++)
+        {
+            virial[0] += atoms[n].neighbors[l].dr[0] * force[0]; // xx
+            virial[1] += atoms[n].neighbors[l].dr[1] * force[1]; // yy
+            virial[2] += atoms[n].neighbors[l].dr[2] * force[2]; // zz
+            virial[3] += atoms[n].neighbors[l].dr[0] * force[1]; // xy
+            virial[4] += atoms[n].neighbors[l].dr[0] * force[2]; // xz
+            virial[5] += atoms[n].neighbors[l].dr[1] * force[2]; // yz
+        }
+    }
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] *= -0.5 * LJ_24_EPSILON_SIGMA_6;
+    }
+}
 
 double ComputeBoxVolume()
 {
@@ -1290,46 +1345,30 @@ double ComputeBoxVolume()
     return VecDotMul(areaVector, boxTranVecs[2]);
 }
 
-
 void ComputeStress(double stress[6])
 {
-    int n, d;
-    int i, j;
-    double boxTranVecs_ori[3][3];
+    // result unit: GPa
+    int n, l, d;
+    double ke[6], virial[6];
     double volume;
-    
-    for (i=0;i<3;i++)
-    {
-        for (j=0;j<3;j++)
-        {
-            boxTranVecs_ori[i][j] = boxTranVecs[i][j];
-            boxTranVecs[i][j] *= 10;
-        }
-    }
-
     for (d = 0; d < 6; d++)
     {
         stress[d] = 0;
     }
-    NeighborList(1);
-    Potential(0, 1);
     for (n = 0; n < atomNumber; n++)
     {
-        stress[0] += -atoms[n].force[0] * atoms[n].r[0] - atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
-        stress[1] += -atoms[n].force[1] * atoms[n].r[1] - atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[2] += -atoms[n].force[2] * atoms[n].r[2] - atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[3] += -atoms[n].force[0] * atoms[n].r[1] - atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
-        stress[4] += -atoms[n].force[0] * atoms[n].r[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-        stress[5] += -atoms[n].force[1] * atoms[n].r[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
-    }
-    for (i=0;i<3;i++)
-    {
-        for (j=0;j<3;j++)
+        ke[0] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[0]; // xx
+        ke[1] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[1]; // yy
+        ke[2] = -typeMasses[atoms[n].type] * atoms[n].velocity[2] * atoms[n].velocity[2]; // zz
+        ke[3] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[1]; // xy
+        ke[4] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[2]; // xz
+        ke[5] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[2]; // yz
+        VirialPair(n, virial);
+        for (d = 0; d < 6; d++)
         {
-            boxTranVecs[i][j] = boxTranVecs_ori[i][j];
+            stress[d] += ke[d] + virial[d];
         }
     }
-    NeighborList(1);
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
@@ -1337,6 +1376,46 @@ void ComputeStress(double stress[6])
     }
 }
 
+void Barostat(double targetPressure, double deltaTime, char algorithm[20])
+{
+    // adjust stress_xx stress_yy stress_zz to targetPressure
+    // only for prependicular box
+    // only for gas phase
+    if (boxPerpendicular == 0)
+    {
+        printf("Error: This barostat funtion does not support the situation with disprependicular box.");
+        exit(1);
+    }
+    if (strcmp(algorithm, "Berendersen") == 0)
+    {
+        Barostat_Berendersen(targetPressure, deltaTime);
+    }
+    else
+    {
+        printf("Error: Barostat algorithm %s not found.\n", algorithm);
+        exit(1);
+    }
+}
+
+void Barostat_Berendersen(double targetPressure, double deltaTime)
+{
+    int d, n;
+    double preFactor, eta;
+    double stress[6];
+    double beta_tau = 0.01;
+
+    preFactor = deltaTime * beta_tau;
+    ComputeStress(stress);
+    for (d = 0; d < 3; d++)
+    {
+        eta = 1 + preFactor * (targetPressure - stress[d]);
+        boxTranVecs[d][d] *= eta;
+        for (n = 0; n < atomNumber; n++)
+        {
+            atoms[n].r[d] *= eta;
+        }
+    }
+}
 
 void Dynamics(double stopTime, double timeStep)
 {
@@ -1350,7 +1429,7 @@ void Dynamics(double stopTime, double timeStep)
     printf("step time temperature stress_xx\n");
     temperature = ComputeTemperature();
     ComputeStress(stress);
-    printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
+    printf("%d %f %f %f\n", nStep, time, temperature, stress[0]);
     while (time <= stopTime)
     {
         IterRun(timeStep);
@@ -1360,7 +1439,7 @@ void Dynamics(double stopTime, double timeStep)
         {
             temperature = ComputeTemperature();
             ComputeStress(stress);
-            printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
+            printf("%d %f %f %f\n", nStep, time, temperature, stress[0]);
         }
     }
 }

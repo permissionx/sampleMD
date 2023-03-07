@@ -1337,20 +1337,23 @@ void ComputeStress(double stress[6])
     }
 }
 
-
 void Dynamics(double stopTime, double timeStep)
 {
     double time;
     int n, d;
-    double temperature;
-    double stress[6];
+    double totalEnergy;
     char dumpName[30];
+
+    strcpy(dumpName, "dumps/bcc_run_5.9.a.lammpstrj");
+    Dump_lammpstrj(dumpName, 1, 0);
+    printf("step time totalEnergy\n");
+    NeighborList(0);
+    Potential(1, 0);
+    totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+    printf("%d %f %f\n", 0, 0.0, totalEnergy);
+
     time = 0;
     nStep = 0;
-    printf("step time temperature stress_xx\n");
-    temperature = ComputeTemperature();
-    ComputeStress(stress);
-    printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
     while (time <= stopTime)
     {
         IterRun(timeStep);
@@ -1358,11 +1361,18 @@ void Dynamics(double stopTime, double timeStep)
         time += timeStep;
         if (nStep % 100 == 0)
         {
-            temperature = ComputeTemperature();
-            ComputeStress(stress);
-            printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
+            Dump_lammpstrj(dumpName, 0, nStep);
+            NeighborList(0);
+            Potential(1, 0);
+            totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+            printf("%d %f %f\n", nStep, time, totalEnergy);
         }
     }
+}
+
+void ComputeStress_(double stress[6])
+{
+    
 }
 
 /* main */
@@ -1373,24 +1383,43 @@ int main()
     randomSeed = 1.0;
     srand(randomSeed);
 
-    typeMasses[1] = 20.1797; // for Ne
+    typeMasses[1] = 183.84; // for W 
     InitMassUnit();
-    strcpy(potentialName, "LJ");
-    potentialCutoff_LJ = 20;
-    neighborCutoff = 20;
+    strcpy(potentialName, "EAM");
+    neighborCutoff = 6;
     neighborInterval = 100;
     strcpy(dynamicStyle, "VelocityVerlet");
+    ConstructStdCrystal_BCC(3.14, 5);
+    InitVelocity(300.0);
+    Dynamics(1.0, 0.0005);
+    Dump_lammpstrj("dis.dump",1,0);
 
     /* processing*/
-    double temperature;
-    for (temperature = 100; temperature <= 400; temperature += 50)
-    {
-        printf("----Case for initial temperature of %f K----\n", temperature);
-        ConstructStdCrystal_FCC(4.23, 5);
-        InitVelocity(temperature);
-        Dynamics(1.0, 0.0005);
-        printf("----------\n\n");
-    }
+    /*
+    double latticeConstant;
+    double stress[6];
+    int d;
 
+    strcpy(dynamicStyle, "VelocityVerlet");
+
+    printf("lc str_xx str_yy str_zz str_xy str_xz str_yz potential\n");
+    for (latticeConstant = 3.05; latticeConstant < 3.24; latticeConstant += 0.01)
+    {
+        ConstructStdCrystal_BCC(latticeConstant, 10);
+        InitVelocity(0);
+        printf("%f ", latticeConstant);
+        ComputeStress(stress);
+        for (d = 0; d < 6; d++)
+        {
+            printf("%f ", stress[d]);
+        }
+        Potential(1, 0);
+        printf("%f\n", totalPotentialEnergy/atomNumber);
+        Dump_lammpstrj("dumps/c.dump",1,0);
+        nStep += 1;
+    }
+    // InitVelocity(300);
+    // Dynamics(1, 0.001);
     return 0;
+    */
 }

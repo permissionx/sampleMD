@@ -1,0 +1,69 @@
+# variable alc loop 20
+# variable  lc equal 3.04+0.01*${alc}
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p  
+atom_style     atomic
+lattice        bcc 3.2
+
+# Box & atoms
+region         box block 0 10 0 10 0 10 
+region         wbox block 0 9.9 0 10 0 10
+create_box     2 box
+read_dump      /home/xuke/Researches/CompuphysBook/sampleMD/sampleMD/chapters/DLC/dis.dump 0 x y z box yes add yes 
+region         right block 5.1 10.1 INF INF INF INF 
+group          right region right 
+
+# Interactions
+include        pot
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       natom equal count(all)
+variable       pe equal pe/${natom}
+variable       pxx equal -pxx/10000
+variable       pxy equal -pxy/10000
+
+variable       virial atom fx*x
+compute        1 all reduce sum v_virial
+
+# Run
+dump           1 all custom 1 last.dump id type x y z fx fy fz 
+run 0
+undump         1
+print          "3.2 ${pxx} ${pxy} ${pe}" append dat
+variable       force_save equal fx
+variable       stress_self equal -c_1/2048*160.21766208 
+
+clear     
+boundary       f p p    
+region         box block 0 10 0 10 0 10 
+region         wbox block 0 9.9 0 10 0 10
+create_box     2 box
+read_dump      /home/xuke/Researches/CompuphysBook/sampleMD/sampleMD/chapters/DLC/dis.dump 0 x y z box yes add yes 
+region         right block 5.1 10.1 INF INF INF INF 
+group          right region right 
+include        pot
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       natom equal count(all)
+variable       pe equal pe/${natom}
+variable       pxx equal -pxx/10000
+variable       pxy equal -pxy/10000
+
+variable       virial atom fx*x
+compute        1 all reduce sum v_virial
+
+
+
+run 0
+variable       f_image equal ${force_save}-fx
+compute        2 right reduce sum f_image
+variable       stress_image equal c_2/256*160.21766208
+
+
+
+# Ending
+# clear
+# next           alc
+# jump           SELF 

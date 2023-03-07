@@ -1,0 +1,86 @@
+# variable alc loop 20
+# variable  lc equal 3.04+0.01*${alc}
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p  
+atom_style     atomic
+lattice        bcc 3.2
+
+# Box & atoms
+region         box block 0 10 0 10 0 10 
+region         wbox block 0 9.9 0 10 0 10
+create_box     2 box
+read_dump      ../../dis.dump 0 x y z box yes add yes 
+region         right block 16 INF INF INF INF INF units box 
+group          right region right
+
+# Interactions
+include        pot
+variable       pe equal pe 
+variable       pxx equal -pxx/10000
+variable       pyy equal -pyy/10000
+variable       pzz equal -pzz/10000
+variable       pxy equal -pxy/10000
+variable       pxz equal -pxz/10000
+variable       pyz equal -pyz/10000
+
+compute        1 right reduce sum fy 
+variable       f1tmp equal c_1
+
+variable       virialperatom atom -fy*x
+compute        3 all reduce sum v_virialperatom
+variable       virialtmp equal c_3/32/32/32*160.21766208
+
+
+thermo_style   custom pe pxx pyy pzz pxy pxz pyz c_3 c_1 
+
+dump           1 all custom 10 force.dump id type x y z fx fy fz
+run            1
+undump         1
+
+variable       virial equal ${virialtmp}
+variable       f1 equal ${f1tmp}
+variable       pxx1 equal ${pxx}
+variable       pxy1 equal ${pxy}
+print          "@@@@@@@@@@@@@@  ${f1}"
+print          "${pxx} ${pyy} ${pzz} ${pxy} ${pxz} ${pyz}" file stress
+
+clear
+
+#-------------------
+#-------------------
+#-------------------
+# Box & atoms
+units          metal
+dimension      3
+boundary       f p p  
+atom_style     atomic
+lattice        bcc 3.2
+
+region         box block 0 10 0 10 0 10 
+region         wbox block 0 9.9 0 10 0 10
+create_box     2 box
+read_dump      /home/xuke/Researches/CompuphysBook/sampleMD/sampleMD/chapters/DLC/dis.dump 0 x y z box yes add yes 
+region         right block 16 INF INF INF INF INF units box 
+group          right region right
+
+include        pot
+compute        2 right reduce sum fy 
+variable       f2tmp equal c_2
+
+thermo_style   custom pe pxx pxy c_2
+dump           1 all custom 10 force.dump id type x y z fx fy fz
+run 0
+undump         1
+variable       f2 equal ${f2tmp}
+
+variable       delta_f equal (${f1}-${f2})/32/32*160.21766208
+
+variable       stress equal ${virial}+${delta_f}
+
+print          "@@@@@@@@@@@@@@  ${f2}"
+
+
+print          "${stress}"
+print          "${pxy1}"

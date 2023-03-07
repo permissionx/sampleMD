@@ -1,0 +1,7 @@
+pair_style	eam/alloy
+pair_coeff   * * WHff.eam.alloy W H
+mass 1 1.83840E+02
+mass 2 1.00794E+00
+
+
+

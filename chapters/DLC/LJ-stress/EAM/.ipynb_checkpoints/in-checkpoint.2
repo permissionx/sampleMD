@@ -1,0 +1,22 @@
+# variable alc loop 20
+# variable  lc equal 3.04+0.01*${alc}
+# System Initialization
+units          metal
+dimension      3
+boundary       f p p  
+atom_style     atomic
+lattice        bcc 3.2
+
+# Box & atoms
+region         box block 0 10 0 10 0 10 
+region         wbox block 0 9.9 0 10 0 10
+create_box     2 box
+read_dump      /home/xuke/Researches/CompuphysBook/sampleMD/sampleMD/chapters/DLC/dis.ff.dump 0 x y z box yes add yes 
+
+
+# Interactions
+include        pot
+
+dump           1 all custom 10 force.dump id type x y z fx fy fz
+run 0
+undump         1

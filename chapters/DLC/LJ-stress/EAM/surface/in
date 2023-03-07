@@ -1,0 +1,28 @@
+# System Initialization
+units          metal
+dimension      3
+boundary       s s s 
+atom_style     atomic
+lattice        bcc 3.14
+
+# Box & atoms
+region         box block 0 9.9 0 9.9 0 9.9
+create_box     2 box
+create_atoms   1 box
+region         void block INF INF INF INF 5.1 10.1 
+delete_atoms   region void 
+
+# Interactions
+include        pot
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       natom equal count(all)
+variable       pe equal pe/${natom}
+variable       pxx equal -pxx/10000
+
+# Run
+dump           1 all custom 1 surface_lammps.dump id type x y z fx fy fz 
+run 0
+undump         1
+
+

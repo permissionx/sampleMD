@@ -1,0 +1,35 @@
+variable lc index 4.15 4.16 4.17 4.18 4.1899999999999995 4.199999999999999 4.209999999999999 4.219999999999999 4.229999999999999 4.239999999999998 4.249999999999998 4.259999999999998 4.269999999999998 4.279999999999998 4.289999999999997 4.299999999999997 4.309999999999997 4.319999999999997 4.3299999999999965 4.339999999999996
+
+# System Initialization
+units          metal
+dimension      3
+boundary       p p p
+atom_style     atomic
+lattice        fcc ${lc}
+
+# Box & atoms
+region         box block 0 5 0 5 0 5 
+create_box     1 box
+create_atoms   1 box
+
+# Interactions
+pair_style     lj/cut 20
+pair_coeff     * * 0.0031 2.74 
+neighbor       0.3 bin
+mass 1 20.1797
+thermo         10
+thermo_style   custom step pxx pyy pzz pxy pxz pyz pe
+variable       pe equal pe
+variable       pxx equal -pxx/10000
+
+# Run
+#dump           1 all custom 1 last.dump id type x y z 
+run 0
+#undump         1
+print          "${pe} ${pxx}" append dat
+
+
+# Ending
+clear
+next           lc
+jump           SELF 

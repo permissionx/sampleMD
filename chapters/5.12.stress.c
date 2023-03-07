@@ -88,7 +88,7 @@ struct AtomNeighbor
 {
     int index;
     double distance;
-    double dr[3]; // from atom to neighbor
+    double dr[3]; // from atom to neighbor, or say (neighbor - atom)
 };
 
 struct Atom
@@ -147,6 +147,8 @@ double delta_lineMinimize;
 double typeMasses[5];
 char dynamicStyle[20];
 
+int isPBC = 1;
+
 /* function declarations */
 void ConstructReducedLattice();
 void ConstructLattice();
@@ -201,6 +203,8 @@ void IterRun_Verlet(double timeStep);
 void IterRun_VelocityVerlet(double timeStep);
 double ComputeTotalKineticEnergy();
 double ComputeTemperature();
+void VirialPair(int n, double virial[6]);
+void VirialPair_LJ(int n, double virial[6]);
 double ComputeBoxVolume();
 void ComputeStress(double stress[6]);
 
@@ -446,14 +450,30 @@ void PBC_r()
 
 void PBC_dr(int i, int j, double dr[3])
 {
-    if (boxPerpendicular == 1)
+    if (isPBC != 1)
     {
-        PBC_dr_vertical(i, j, dr);
+        Dr(i, j, dr);
     }
     else
     {
-        ComputeAtomBoxReR();
-        PBC_dr_general(i, j, dr);
+        if (boxPerpendicular == 1)
+        {
+            PBC_dr_vertical(i, j, dr);
+        }
+        else
+        {
+            ComputeAtomBoxReR();
+            PBC_dr_general(i, j, dr);
+        }
+    }
+}
+
+void Dr(int i, int j, double dr[3])
+{
+    int d;
+    for (d = 0; d < 3; d++)
+    {
+        dr[d] = atoms[j].r[d] - atoms[i].r[d];
     }
 }
 
@@ -1282,6 +1302,57 @@ double ComputeTemperature()
     return T;
 }
 
+void VirialPair(int n, double virial[6])
+{
+    // result unit: eV
+    NeighborList(0);
+    if (strcmp(potentialName, "LJ") == 0)
+    {
+        VirialPair_LJ(n, virial);
+    }
+    else
+    {
+        printf("Error: Calculating Virial pair for potential %s is not supported.\n", potentialName);
+        exit(1);
+    }
+}
+
+void VirialPair_LJ(int n, double virial[6])
+{
+    int l, d;
+    double sigma6;
+    double distance, distance8, distance14;
+    double x;
+    double force[3];
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] = 0;
+    }
+    for (l = 0; l < atoms[n].neighborNumber; l++)
+    {
+        distance = atoms[n].neighbors[l].distance;
+        distance8 = pow(distance, 8);
+        distance14 = pow(distance, 14);
+        for (d = 0; d < 3; d++)
+        {
+            x = atoms[n].neighbors[l].dr[d];
+            force[d] = (LJ_2_SIGMA_6 * x / distance14 - x / distance8);
+        }
+        for (d = 0; d < 6; d++)
+        {
+            virial[0] += atoms[n].neighbors[l].dr[0] * force[0]; // xx
+            virial[1] += atoms[n].neighbors[l].dr[1] * force[1]; // yy
+            virial[2] += atoms[n].neighbors[l].dr[2] * force[2]; // zz
+            virial[3] += atoms[n].neighbors[l].dr[0] * force[1]; // xy
+            virial[4] += atoms[n].neighbors[l].dr[0] * force[2]; // xz
+            virial[5] += atoms[n].neighbors[l].dr[1] * force[2]; // yz
+        }
+    }
+    for (d = 0; d < 6; d++)
+    {
+        virial[d] *= -0.5 * LJ_24_EPSILON_SIGMA_6;
+    }
+}
 
 double ComputeBoxVolume()
 {
@@ -1290,23 +1361,77 @@ double ComputeBoxVolume()
     return VecDotMul(areaVector, boxTranVecs[2]);
 }
 
-
 void ComputeStress(double stress[6])
+{
+    // result unit: GPa
+    int n, l, d;
+    double ke[6], virial[6];
+    double volume;
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] = 0;
+    }
+    for (n = 0; n < atomNumber; n++)
+    {
+        ke[0] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[0]; // xx
+        ke[1] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[1]; // yy
+        ke[2] = -typeMasses[atoms[n].type] * atoms[n].velocity[2] * atoms[n].velocity[2]; // zz
+        ke[3] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[1]; // xy
+        ke[4] = -typeMasses[atoms[n].type] * atoms[n].velocity[0] * atoms[n].velocity[2]; // xz
+        ke[5] = -typeMasses[atoms[n].type] * atoms[n].velocity[1] * atoms[n].velocity[2]; // yz
+        VirialPair(n, virial);
+        for (d = 0; d < 6; d++)
+        {
+            stress[d] += ke[d] + virial[d];
+        }
+    }
+    volume = ComputeBoxVolume();
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] *= 160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
+    }
+}
+
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double totalEnergy;
+    char dumpName[30];
+
+    strcpy(dumpName, "dumps/bcc_run_5.9.a.lammpstrj");
+    Dump_lammpstrj(dumpName, 1, 0);
+    printf("step time totalEnergy\n");
+    NeighborList(0);
+    Potential(1, 0);
+    totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+    printf("%d %f %f\n", 0, 0.0, totalEnergy);
+
+    time = 0;
+    nStep = 0;
+    while (time <= stopTime)
+    {
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            Dump_lammpstrj(dumpName, 0, nStep);
+            NeighborList(0);
+            Potential(1, 0);
+            totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+            printf("%d %f %f\n", nStep, time, totalEnergy);
+        }
+    }
+}
+
+void ComputeStress_(double stress[6])
 {
     int n, d;
     int i, j;
     double boxTranVecs_ori[3][3];
     double volume;
-    
-    for (i=0;i<3;i++)
-    {
-        for (j=0;j<3;j++)
-        {
-            boxTranVecs_ori[i][j] = boxTranVecs[i][j];
-            boxTranVecs[i][j] *= 10;
-        }
-    }
-
+    isPBC = 0;
     for (d = 0; d < 6; d++)
     {
         stress[d] = 0;
@@ -1322,46 +1447,12 @@ void ComputeStress(double stress[6])
         stress[4] += -atoms[n].force[0] * atoms[n].r[2] - atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
         stress[5] += -atoms[n].force[1] * atoms[n].r[2] - atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
     }
-    for (i=0;i<3;i++)
-    {
-        for (j=0;j<3;j++)
-        {
-            boxTranVecs[i][j] = boxTranVecs_ori[i][j];
-        }
-    }
+    isPBC = 1;
     NeighborList(1);
     volume = ComputeBoxVolume();
     for (d = 0; d < 6; d++)
     {
         stress[d] *= 160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
-    }
-}
-
-
-void Dynamics(double stopTime, double timeStep)
-{
-    double time;
-    int n, d;
-    double temperature;
-    double stress[6];
-    char dumpName[30];
-    time = 0;
-    nStep = 0;
-    printf("step time temperature stress_xx\n");
-    temperature = ComputeTemperature();
-    ComputeStress(stress);
-    printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
-    while (time <= stopTime)
-    {
-        IterRun(timeStep);
-        nStep += 1;
-        time += timeStep;
-        if (nStep % 100 == 0)
-        {
-            temperature = ComputeTemperature();
-            ComputeStress(stress);
-            printf("%d %f %f %f\n",nStep, time, temperature, stress[0]);
-        }
     }
 }
 
@@ -1379,18 +1470,30 @@ int main()
     potentialCutoff_LJ = 20;
     neighborCutoff = 20;
     neighborInterval = 100;
-    strcpy(dynamicStyle, "VelocityVerlet");
 
     /* processing*/
-    double temperature;
-    for (temperature = 100; temperature <= 400; temperature += 50)
+    double latticeConstant;
+    double stress[6], stress_[6];
+    int d;
+    printf("lc str_xx str_yy str_zz str_xy str_xz str_yz potential\n");
+    for (latticeConstant = 4.15; latticeConstant < 4.35; latticeConstant += 0.01)
     {
-        printf("----Case for initial temperature of %f K----\n", temperature);
-        ConstructStdCrystal_FCC(4.23, 5);
-        InitVelocity(temperature);
-        Dynamics(1.0, 0.0005);
-        printf("----------\n\n");
+        ConstructStdCrystal_FCC(latticeConstant, 6);
+        InitVelocity(0.0);
+        printf("%f ", latticeConstant);
+        ComputeStress(stress);
+        ComputeStress_(stress_);
+        for (d = 0; d < 6; d++)
+        {
+            printf("%f ", stress[d]);
+            printf("%f ", stress_[d]);
+        }
+        Potential(1, 0);
+        printf("%f\n", totalPotentialEnergy / atomNumber);
+        nStep += 1;
+        // exit(1);
     }
-
+    // InitVelocity(300);
+    // Dynamics(1, 0.001);
     return 0;
 }
