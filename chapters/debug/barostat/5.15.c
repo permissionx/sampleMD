@@ -211,7 +211,6 @@ void ComputeStress(double stress[6]);
 void Barostat(double stress[6], double targetStress[3], int frequency, double timeStep, char algorithm[20]);
 void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep);
 void Barostat_Andersen(double stress[6], double targetStress[3], int frequency, double timeStep);
-void InitDynamic();
 
 /* functions */
 void ConstructReducedLattice()
@@ -1443,11 +1442,6 @@ void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency,
 
 void Barostat_Andersen(double stress[6], double targetStress[3], int frequency, double timeStep)
 {
-    if (!(targetStress[0]==targetStress[1] && targetStress[0] == targetStress[2]))
-    {
-        printf("Error: Andersen barostat can only used for target sigma_xx == sigma_yy == sigma_zz\n");
-        exit(1);
-    }
     double M = 10; // piston mass, unit: unit: eV/(ps/A)^2
 
     static int count = 0;
@@ -1505,9 +1499,7 @@ void Dynamics(double stopTime, double timeStep)
     double temperature;
     double stress[6];
     double targetStress[3] = {2, 2, 2};
-    
-    InitDynamic();
-      
+
     time = 0;
     nStep = 0;
     printf("step time temperature strxx stryy strzz\n");
@@ -1518,7 +1510,7 @@ void Dynamics(double stopTime, double timeStep)
             temperature = ComputeTemperature();
             ComputeStress(stress);
         }
-        if (nStep % 1000 == 0)
+        if (nStep % 100 == 0)
         {
             printf("%d %f %f %f %f %f %f %f %f \n", nStep, time, temperature, stress[0], stress[1], stress[2], boxTranVecs[0][0], boxTranVecs[1][1], boxTranVecs[2][2]);
         }
@@ -1540,6 +1532,7 @@ void InitDynamic()
         }
     }
 }
+
 
 
 /* main */

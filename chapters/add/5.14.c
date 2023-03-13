@@ -1,19 +1,30 @@
 /* function declarations */
-void Barostat_Berendsen(double stress[6], double targetStress[3], double deltaTime);
+void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep);
 
 /* functions */
-void Barostat_Berendsen(double stress[6], double targetStress[3], double deltaTime)
+void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep)
 {
-    double k_tau = 1.0; // parameter
+    static int count = 0;
+    double k_tau = 0.01; // parameter
     int n, d;
     double lambda;
-    for (d = 0; d < 3; d++)
+    double deltaTime;
+    deltaTime = frequency * timeStep;
+    if (count == 0)
     {
-        lambda = 1 + k_tau * deltaTime * (targetStress[d] - stress[d]);
-        boxTranVecs[d][d] *= lambda;
-        for (n = 0; n < atomNumber; n++)
+        for (d = 0; d < 3; d++)
         {
-            atoms[n].r[d] *= lambda;
+            lambda = 1 + k_tau * deltaTime * (targetStress[d] - stress[d]);
+            boxTranVecs[d][d] *= lambda;
+            for (n = 0; n < atomNumber; n++)
+            {
+                atoms[n].r[d] *= lambda;
+            }
         }
+    }
+    count += 1;
+    if (count == frequency)
+    {
+        count = 0;
     }
 }
