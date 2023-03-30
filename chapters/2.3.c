@@ -164,21 +164,18 @@ void ComputeAtomReR()
     }
 }
 
-void ComputeAtomBoxReR()
+void ComputeAtomBoxReR(int n)
 {
-    int n, d;
-    for (n = 0; n < atomNumber; n++)
+    int d;
+    for (d = 0; d < 3; d++)
     {
-        for (d = 0; d < 3; d++)
+        atoms[n].boxReR[d] = boxRecTranVecs[d][0] * (atoms[n].r[0] - boxStartPoint[0]) +
+                             boxRecTranVecs[d][1] * (atoms[n].r[1] - boxStartPoint[1]) +
+                             boxRecTranVecs[d][2] * (atoms[n].r[2] - boxStartPoint[2]);
+        if (atoms[n].boxReR[d] < -1 || atoms[n].boxReR[d] >= 2)
         {
-            atoms[n].boxReR[d] = boxRecTranVecs[d][0] * (atoms[n].r[0] - boxStartPoint[0]) +
-                                 boxRecTranVecs[d][1] * (atoms[n].r[1] - boxStartPoint[1]) +
-                                 boxRecTranVecs[d][2] * (atoms[n].r[2] - boxStartPoint[2]);
-            if (atoms[n].boxReR[d] < -1 || atoms[n].boxReR[d] >= 2)
-            {
-                printf("Lost atom %d!\n", atoms[n].id);
-                exit(1);
-            }
+            printf("Lost atom %d!\n", atoms[n].id);
+            exit(1);
         }
     }
 }

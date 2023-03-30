@@ -47,13 +47,17 @@ void PBC_dr_vertical(int i, int j, double dr[3])
 
 void PBC_r()
 {
+    int n;
     if (boxPerpendicular == 1)
     {
         PBC_r_vertical();
     }
     else
     {
-        ComputeAtomBoxReR();
+        for (n = 0; n < atomNumber; n++)
+        {
+            ComputeAtomBoxReR(n);
+        }
         PBC_r_general();
     }
 }
@@ -66,7 +70,8 @@ void PBC_dr(int i, int j, double dr[3])
     }
     else
     {
-        ComputeAtomBoxReR();
+        ComputeAtomBoxReR(i);
+        ComputeAtomBoxReR(j);
         PBC_dr_general(i, j, dr);
     }
 }
