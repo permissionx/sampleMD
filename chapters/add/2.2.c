@@ -35,8 +35,9 @@ void PBC_r_general()
 /* main */
 int main()
 {
+    int n;
     /* parameters */
-    double latticeConstant = 5; //unit: angstrom
+    double latticeConstant = 5; // unit: angstrom
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 4;
     latticeSizes[1][0] = 0;
@@ -84,10 +85,15 @@ int main()
     ConstructLattice();
     ConstructCrystal();
 
-    printf("original x position of atom0: %f\n",atoms[0].r[0]);
+    printf("original x position of atom0: %f\n", atoms[0].r[0]);
     atoms[0].r[0] -= 1;
-    printf("x position of shifted atom0 without PBC: %f\n",atoms[0].r[0]);
-    ComputeAtomBoxReR();
+    printf("x position of shifted atom0 without PBC: %f\n", atoms[0].r[0]);
+    for (n = 0; n < atomNumber; n++)
+    {
+        ComputeAtomBoxReR(n);
+    }
     PBC_r_general();
-    printf("x position of shifted atom0 with PBC: %f\n",atoms[0].r[0]);
+    printf("x position of shifted atom0 with PBC: %f\n", atoms[0].r[0]);
+
+    return 0;
 }

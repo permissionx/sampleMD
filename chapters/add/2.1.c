@@ -35,8 +35,9 @@ void ComputeAtomBoxReR(int n)
 /* main */
 int main()
 {
+    int n, d;
     /* parameters */
-    double latticeConstant = 3.14; //unit: angstrom
+    double latticeConstant = 3.14; // unit: angstrom
     latticeSizes[0][0] = 0;
     latticeSizes[0][1] = 4;
     latticeSizes[1][0] = 0;
@@ -79,19 +80,23 @@ int main()
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-    ComputetAtomBoxReR();
-    
+    for (n = 0; n < atomNumber; n++)
+    {
+        ComputeAtomBoxReR(n);
+    }
 
     /* output */
-    int n, d;
+    printf("             rex              rey              rez\n");
     for (n = 0; n < atomNumber; n++)
     {
         for (d = 0; d < 3; d++)
         {
-            printf("%f ", atoms[n].boxReR[d]);
+            printf("%16.6f ", atoms[n].boxReR[d]);
         }
         printf("\n");
     }
+
+    return 0;
 }
 
 /* output

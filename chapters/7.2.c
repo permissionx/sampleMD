@@ -587,7 +587,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
 {
     int n;
     FILE *fp;
-    if (boxPerpendicular != 1)
+    if (0) // boxPerpendicular != 1)
     {
         printf("Error: Dump_lammpstrj() only works in cuboid.\n");
         exit(1);
@@ -1645,7 +1645,7 @@ void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy
     latticeSizes[2][1] = length;
 
     priTranVecs[0][0] = latticeConstant;
-    priTranVecs[0][1] = 0;
+    priTranVecs[0][1] = latticeConstant * xy;
     priTranVecs[0][2] = 0;
     priTranVecs[1][0] = 0;
     priTranVecs[1][1] = latticeConstant;
@@ -1659,7 +1659,7 @@ void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy
     cellAtomRs[0][1] = 0;
     cellAtomRs[0][2] = 0;
     cellAtomRs[1][0] = 0.5 * latticeConstant;
-    cellAtomRs[1][1] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant + 0.5 * latticeConstant * xy;
     cellAtomRs[1][2] = 0.5 * latticeConstant;
     cellAtomTypes[0] = 1;
     cellAtomTypes[1] = 1;
@@ -1705,6 +1705,7 @@ int main()
     int n;
     double stress[6];
 
+    printf("strain_xy energy\n");
     for (strain = -0.001; strain < 0.00101; strain += 0.0001)
     {
         ConstructStdCrystal_BCC_Shear(3.14, 10, strain);

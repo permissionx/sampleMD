@@ -75,10 +75,13 @@ int main()
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
-    ComputeAtomBoxReR();
     printf("Coordinate of atom0: (%f,%f,%f)\n", atoms[0].r[0], atoms[0].r[1], atoms[0].r[2]);
     printf("Coordinate of atom6: (%f,%f,%f)\n", atoms[6].r[0], atoms[6].r[1], atoms[6].r[2]);
     double dr[3];
+    ComputeAtomBoxReR(0);
+    ComputeAtomBoxReR(6);
     PBC_dr_general(0, 6, dr);
     printf("displacement from atom0 to atom1: (%f,%f,%f)\n", dr[0], dr[1], dr[2]);
+
+    return 0;
 }

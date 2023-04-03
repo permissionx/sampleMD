@@ -213,6 +213,7 @@ void PBC_r()
 /* main */
 int main()
 {
+    int n;
     /* parameters */
     double latticeConstant = 5; //unit: angstrom
     latticeSizes[0][0] = 0;
@@ -265,7 +266,10 @@ int main()
     printf("original x position of atom0: %f\n",atoms[0].r[0]);
     atoms[0].r[0] -= 1;
     printf("x position of shifted atom0 WITHOUT PBC: %f\n",atoms[0].r[0]);
-    ComputeAtomBoxReR();
+    for (n = 0; n < atomNumber; n++)
+    {
+        ComputeAtomBoxReR(n);
+    }
     PBC_r();
     printf("x position of shifted atom0 WITH PBC: %f\n",atoms[0].r[0]);
 }
