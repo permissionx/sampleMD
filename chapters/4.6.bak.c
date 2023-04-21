@@ -927,6 +927,7 @@ void Minimize()
     nStep = 0;
     printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
+    NeighborList(1);
     Potential(1, 1);
     printf("%d %20.10f\n", nStep, totalPotentialEnergy);
     do

@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 /* constants */
-#define MAX_LATTICE_NUMBER 20000  // maximum number of lattices
-#define MAX_ATOM_NUMBER 200000    // maximum number of atoms
+#define MAX_LATTICE_NUMBER 20000 // maximum number of lattices
+#define MAX_ATOM_NUMBER 200000   // maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10  // maximum number of atoms in a cell
 #define MAX_NEIGHBOR_NUMBER 2000 // maximum number of neighbors
 // L-J parameters for Ne
@@ -107,6 +107,16 @@ struct Atom
     double lastForce_CG[3];
     double startR_lineMin[3];
     double velocity[3];
+    double acceleration[3];
+    // Verlet
+    double lastR_verlet[3];
+    // Velocity Verlet
+    double lastA_vverlet[3];
+    double stress_Volume[6];
+
+    // Andersen Barostat
+    double accelerationModify[3];
+    double velocityModify[3];
 };
 
 /* global variables */
@@ -139,6 +149,9 @@ char minimizeStyle[20];
 double delta_lineMinimize;
 
 double typeMasses[5];
+char dynamicStyle[20];
+
+double xi_NoseHoover;
 
 /* function declarations */
 void ConstructReducedLattice();
@@ -180,9 +193,34 @@ void MinDirection_SD();
 void MinDirection_CG();
 void LineMinimize();
 
+// chpater 5
 double GaussianRandom(double mu, double sigma);
 void InitMassUnit();
 void VelocityMaxwell(double temperature);
+void ZeroMomentum();
+void InitVelocity(double temperature);
+void Dynamics(double stopTime, double timeStep);
+void IterRun();
+void ComputeAcceleration();
+void IterRun_Euler(double timeStep);
+void IterRun_Verlet(double timeStep);
+void IterRun_VelocityVerlet(double timeStep);
+double ComputeTotalKineticEnergy();
+double ComputeTemperature();
+double ComputeBoxVolume();
+void ComputeNonPBCForce(double nonPBCForce[3][3]);
+void ComputeStress(double stress[6]);
+void Barostat(double stress[6], double targetStress[3], int frequency, double timeStep, char algorithm[20]);
+void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep);
+void Barostat_Andersen(double stress[6], double targetStress[3], int frequency, double timeStep);
+void InitDynamic();
+void ReviveVelocity();
+
+void Thermostat(double temperature, double targetTemperature, int frequency, double timeStep, char algorithm[20]);
+void Thermostat_Berendsen(double temperature, double targetTemperature, int frequency, double timeStep);
+void Thermostat_NoseHoover(double temperature, double targetTemperature, int frequency, double timeStep);
+
+void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy);
 
 /* functions */
 void ConstructReducedLattice()
@@ -549,7 +587,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
 {
     int n;
     FILE *fp;
-    if (boxPerpendicular != 1)
+    if (0) // boxPerpendicular != 1)
     {
         printf("Error: Dump_lammpstrj() only works in cuboid.\n");
         exit(1);
@@ -570,13 +608,14 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
     fprintf(fp, "%f %f\n", boxStartPoint[0], boxStartPoint[0] + boxTranVecs[0][0]);
     fprintf(fp, "%f %f\n", boxStartPoint[1], boxStartPoint[1] + boxTranVecs[1][1]);
     fprintf(fp, "%f %f\n", boxStartPoint[2], boxStartPoint[2] + boxTranVecs[2][2]);
-    fprintf(fp, "ITEM: ATOMS id type x y z pe fx fy fz\n");
+    fprintf(fp, "ITEM: ATOMS id type x y z pe fx fy fz vx vy vz\n");
     for (n = 0; n < atomNumber; n++)
     {
-        fprintf(fp, "%d %d %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f\n",
+        fprintf(fp, "%d %d %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f %30.20f  %30.20f  %30.20f  %30.20f\n",
                 atoms[n].id, atoms[n].type, atoms[n].r[0], atoms[n].r[1], atoms[n].r[2],
                 atoms[n].potentialEnergy,
-                atoms[n].force[0], atoms[n].force[1], atoms[n].force[2]);
+                atoms[n].force[0], atoms[n].force[1], atoms[n].force[2],
+                atoms[n].velocity[0], atoms[n].velocity[1], atoms[n].velocity[2]);
     }
     fclose(fp);
 }
@@ -1103,34 +1142,580 @@ void VelocityMaxWell(double temperature)
     }
 }
 
+void ZeroMomentum()
+{
+    int i, d;
+    double momentum[3] = {0, 0, 0};
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            momentum[d] += atoms[i].velocity[d] * typeMasses[atoms[i].type];
+        }
+    }
+
+    for (d = 0; d < 3; d++)
+    {
+        momentum[d] /= atomNumber;
+    }
+
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].velocity[d] -= momentum[d] / typeMasses[atoms[i].type];
+        }
+    }
+}
+
+void InitVelocity(double temperature)
+{
+    VelocityMaxWell(temperature);
+    ZeroMomentum();
+}
+
+void IterRun(double timeStep)
+{
+    if (strcmp(dynamicStyle, "Euler") == 0)
+        IterRun_Euler(timeStep);
+    else if (strcmp(dynamicStyle, "Verlet") == 0)
+        IterRun_Verlet(timeStep);
+    else if (strcmp(dynamicStyle, "VelocityVerlet") == 0)
+        IterRun_VelocityVerlet(timeStep);
+    else
+    {
+        printf("Eorror: Dynamic style %s not found.", dynamicStyle);
+        exit(1);
+    }
+    ReviveVelocity();
+}
+
+void ComputeAcceleration()
+{
+    int n, d;
+    NeighborList(0);
+    Potential(0, 1);
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].acceleration[d] = atoms[n].force[d] / typeMasses[atoms[n].type] + atoms[n].accelerationModify[d];
+        }
+    }
+}
+
+void IterRun_Euler(double timeStep)
+{
+    int n, d;
+    ComputeAcceleration();
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep;
+            atoms[n].velocity[d] += atoms[n].acceleration[d] * timeStep;
+        }
+    }
+    PBC_r();
+}
+
+void IterRun_Verlet(double timeStep)
+{
+    int n, d;
+    double r_tmp;
+
+    ComputeAcceleration();
+    if (nStep == 0)
+    {
+        for (n = 0; n < atomNumber; n++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[n].lastR_verlet[d] = atoms[n].r[d];
+                atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
+                atoms[n].velocity[d] = (atoms[n].r[d] - atoms[n].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+    else
+    {
+        for (n = 0; n < atomNumber; n++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                r_tmp = atoms[n].r[d];
+                atoms[n].r[d] = 2 * atoms[n].r[d] - atoms[n].lastR_verlet[d] + atoms[n].acceleration[d] * timeStep * timeStep;
+                atoms[n].lastR_verlet[d] = r_tmp;
+                atoms[n].velocity[d] = (atoms[n].r[d] - atoms[n].lastR_verlet[d]) / timeStep;
+            }
+        }
+    }
+    PBC_r();
+}
+
+void IterRun_VelocityVerlet(double timeStep)
+{
+    int n, d;
+    if (nStep == 0)
+    {
+        ComputeAcceleration();
+        for (n = 0; n < atomNumber; n++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
+            }
+        }
+    }
+
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
+        }
+    }
+    PBC_r();
+    ComputeAcceleration();
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].velocity[d] += 0.5 * (atoms[n].acceleration[d] + atoms[n].lastA_vverlet[d]) * timeStep;
+            atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
+        }
+    }
+}
+
+double ComputeTotalKineticEnergy()
+{
+    int n, d;
+    double e = 0;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            e += 0.5 * typeMasses[atoms[n].type] * atoms[n].velocity[d] * atoms[n].velocity[d];
+        }
+    }
+    return e;
+}
+
+double ComputeTemperature()
+{
+    double Ek, T;
+    Ek = ComputeTotalKineticEnergy();
+    T = 2. / 3. / K_B / atomNumber * Ek;
+    return T;
+}
+
+double ComputeBoxVolume()
+{
+    double areaVector[3];
+    VecCroMul(boxTranVecs[0], boxTranVecs[1], areaVector);
+    return VecDotMul(areaVector, boxTranVecs[2]);
+}
+
+void ComputeNonPBCForce(double nonPBCForce[3][3])
+{
+    int n, i, j;
+    for (i = 0; i < 3; i++)
+    {
+        boxTranVecs[i][i] *= 2;
+        NeighborList(1);
+        Potential(0, 1);
+        for (j = 0; j < 3; j++)
+        {
+            nonPBCForce[i][j] = 0;
+        }
+        for (n = 0; n < atomNumber; n++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 4)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                    nonPBCForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+        boxTranVecs[i][i] /= 2;
+    }
+}
+
+void ComputeStress(double stress[6])
+{
+    int n, d, i, j;
+    double volume;
+    double nonPBCForce[3][3], sumAtomForce[3][3];
+    // only for orthogonal box with start point on (0,0,0)
+    if (boxPerpendicular != 1)
+    {
+        printf("Error: computing stress in wrong box, check function ComputeStress()\n");
+        exit(1);
+    }
+
+    // box virial
+    ComputeNonPBCForce(nonPBCForce);
+    NeighborList(1);
+    Potential(0, 1);
+    for (i = 0; i < 3; i++)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            sumAtomForce[i][j] = 0;
+        }
+    }
+
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            if (atoms[n].r[i] >= boxTranVecs[i][i] / 2)
+            {
+                for (j = 0; j < 3; j++)
+                {
+                    sumAtomForce[i][j] += atoms[n].force[j];
+                }
+            }
+        }
+    }
+    stress[0] = boxTranVecs[0][0] * (nonPBCForce[0][0] - sumAtomForce[0][0]);
+    stress[1] = boxTranVecs[1][1] * (nonPBCForce[1][1] - sumAtomForce[1][1]);
+    stress[2] = boxTranVecs[2][2] * (nonPBCForce[2][2] - sumAtomForce[2][2]);
+    stress[3] = boxTranVecs[0][0] * (nonPBCForce[0][1] - sumAtomForce[0][1]);
+    stress[4] = boxTranVecs[0][0] * (nonPBCForce[0][2] - sumAtomForce[0][2]);
+    stress[5] = boxTranVecs[1][1] * (nonPBCForce[1][2] - sumAtomForce[1][2]);
+
+    // add atom virial and ke
+    for (n = 0; n < atomNumber; n++)
+    {
+        stress[0] += atoms[n].r[0] * atoms[n].force[0] + atoms[n].velocity[0] * atoms[n].velocity[0] * typeMasses[atoms[n].type];
+        stress[1] += atoms[n].r[1] * atoms[n].force[1] + atoms[n].velocity[1] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[2] += atoms[n].r[2] * atoms[n].force[2] + atoms[n].velocity[2] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[3] += atoms[n].r[0] * atoms[n].force[1] + atoms[n].velocity[0] * atoms[n].velocity[1] * typeMasses[atoms[n].type];
+        stress[4] += atoms[n].r[0] * atoms[n].force[2] + atoms[n].velocity[0] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+        stress[5] += atoms[n].r[1] * atoms[n].force[2] + atoms[n].velocity[1] * atoms[n].velocity[2] * typeMasses[atoms[n].type];
+    };
+
+    // stress
+    volume = ComputeBoxVolume();
+    for (d = 0; d < 6; d++)
+    {
+        stress[d] *= -160.21766208 / volume; // 1 eV/Angstrom3 = 160.21766208 GPa
+    }
+}
+
+void Barostat(double stress[3], double targetStress[3], int frequency, double timeStep, char algorithm[20])
+{
+    if (boxPerpendicular != 1 || !(boxStartPoint[0] == 0 && boxStartPoint[1] == 0 && boxStartPoint[2] == 0))
+    {
+        printf("Error: Barostat in wrong box, check function Barostat()\n");
+        exit(1);
+    }
+    if (strcmp(algorithm, "Berendsen") == 0)
+    {
+        Barostat_Berendsen(stress, targetStress, frequency, timeStep);
+    }
+    else if (strcmp(algorithm, "Andersen") == 0)
+    {
+        Barostat_Andersen(stress, targetStress, frequency, timeStep);
+    }
+    else
+    {
+        printf("Barostat algorithm %s not found.", algorithm);
+        exit(1);
+    }
+}
+
+void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep)
+{
+    static int count = 0;
+    double k_tau = 1; // parameter
+    int n, d;
+    double lambda;
+    double deltaTime;
+    deltaTime = frequency * timeStep;
+    if (count == 0)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            lambda = 1 + k_tau * deltaTime * (targetStress[d] - stress[d]);
+            boxTranVecs[d][d] *= lambda;
+            for (n = 0; n < atomNumber; n++)
+            {
+                atoms[n].r[d] *= lambda;
+            }
+        }
+    }
+    count += 1;
+    if (count == frequency)
+    {
+        count = 0;
+    }
+}
+
+void Barostat_Andersen(double stress[6], double targetStress[3], int frequency, double timeStep)
+{
+    if (!(targetStress[0] == targetStress[1] && targetStress[0] == targetStress[2]))
+    {
+        printf("Error: Andersen barostat can only used for target sigma_xx == sigma_yy == sigma_zz\n");
+        exit(1);
+    }
+    double M = 10; // piston mass, unit: unit: eV/(ps/A)^2
+
+    static int count = 0;
+    static double pistonVelocity[3] = {0, 0, 0};
+    int n, i;
+    double volume;
+    double pistonAcceleration; // PistonPi/M
+    double deltaTime;
+    double AndersenVelocity, pistonVelocityPerLength; // PI/M/L
+
+    deltaTime = frequency * timeStep;
+
+    if (count == 0)
+    {
+        volume = ComputeBoxVolume();
+        for (i = 0; i < 3; i++)
+        {
+            pistonAcceleration = (targetStress[i] - stress[i]) * volume / boxTranVecs[i][i] / M;
+            pistonVelocity[i] += deltaTime * pistonAcceleration;
+        }
+    }
+    count += 1;
+    if (count == frequency)
+    {
+        count = 0;
+    }
+
+    for (i = 0; i < 3; i++)
+    {
+        boxTranVecs[i][i] += pistonVelocity[i] * timeStep;
+        pistonVelocityPerLength = pistonVelocity[i] / boxTranVecs[i][i];
+        for (n = 0; n < atomNumber; n++)
+        {
+            AndersenVelocity = atoms[n].r[i] * pistonVelocityPerLength;
+            atoms[n].velocity[i] += AndersenVelocity;
+            atoms[n].velocityModify[i] = AndersenVelocity;
+            atoms[n].accelerationModify[i] = -atoms[n].velocity[i] * pistonVelocityPerLength;
+        }
+    }
+}
+
+void InitDynamic()
+{
+    int n, d;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].accelerationModify[d] = 0;
+            atoms[n].velocityModify[d] = 0;
+        }
+    }
+    xi_NoseHoover = 0;
+}
+
+void ReviveVelocity()
+{
+    int n, d;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].velocity[d] -= atoms[n].velocityModify[d];
+        }
+    }
+}
+
+void Thermostat(double temperature, double targetTemperature, int frequency, double timeStep, char algorithm[20])
+{
+    if (strcmp(algorithm, "Berendsen") == 0)
+    {
+        Thermostat_Berendsen(temperature, targetTemperature, frequency, timeStep);
+    }
+    else if (strcmp(algorithm, "Nose-Hoover") == 0)
+    {
+        Thermostat_NoseHoover(temperature, targetTemperature, frequency, timeStep);
+    }
+    else
+    {
+        printf("Thermostat algorithm %s not found.", algorithm);
+        exit(1);
+    }
+}
+
+void Thermostat_Berendsen(double temperature, double targetTemperature, int frequency, double timeStep)
+{
+    static int count = 0;
+    double lambda, deltaTime, deltaTime_tau; // deltaTime_tau: daltaTime/tau
+    int n, d;
+    double tau = 0.01;
+    if (count == 0)
+    {
+        deltaTime_tau = frequency * timeStep / tau;
+        lambda = sqrt(1 + deltaTime_tau * (targetTemperature / temperature - 1));
+        for (n = 0; n < atomNumber; n++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[n].velocity[d] *= lambda;
+            }
+        }
+    }
+    count += 1;
+    if (count == frequency)
+    {
+        count = 0;
+    }
+}
+
+void Thermostat_NoseHoover(double temperature, double targetTemperature, int frequency, double timeStep)
+{
+    static int count = 0;
+    double Q = 0.1; // parameter
+    double xi_velocity;
+    int n, d;
+    if (count == 0)
+    {
+        xi_velocity = 3 * atomNumber * K_B / Q * (temperature - targetTemperature);
+        xi_NoseHoover += xi_velocity * frequency * timeStep;
+    }
+    count += 1;
+    if (count == frequency)
+    {
+        count = 0;
+    }
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[n].accelerationModify[d] = -xi_NoseHoover * atoms[n].velocity[d];
+        }
+    }
+}
+
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double temperature;
+    double targetTemperature = 300;
+    FILE *fp;
+    char fileName[50] = "debug/thermostat/time-temperature.nh.csv";
+    char dumpName[50] = "debug/thermostat/run.nh.dump";
+
+    InitDynamic();
+
+    time = 0;
+    nStep = 0;
+    fp = fopen(fileName, "w");
+    fprintf(fp, "step time temperature\n");
+    Dump_lammpstrj(dumpName, 1, nStep);
+    while (time <= stopTime)
+    {
+        if (nStep % 100 == 0)
+        {
+            temperature = ComputeTemperature();
+        }
+        if (nStep % 100 == 0)
+        {
+            fprintf(fp, "%d %f %f\n", nStep, time, temperature);
+            printf("%d %f %f\n", nStep, time, temperature);
+            Dump_lammpstrj(dumpName, 0, nStep);
+        }
+        if (nStep >= 4000)
+        {
+            Thermostat(temperature, targetTemperature, 100, timeStep, "Nose-Hoover");
+        }
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+    }
+    fclose(fp);
+}
+
+void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy)
+{
+    latticeSizes[0][0] = 0;
+    latticeSizes[0][1] = length;
+    latticeSizes[1][0] = 0;
+    latticeSizes[1][1] = length;
+    latticeSizes[2][0] = 0;
+    latticeSizes[2][1] = length;
+
+    priTranVecs[0][0] = latticeConstant;
+    priTranVecs[0][1] = latticeConstant * xy;
+    priTranVecs[0][2] = 0;
+    priTranVecs[1][0] = 0;
+    priTranVecs[1][1] = latticeConstant;
+    priTranVecs[1][2] = 0;
+    priTranVecs[2][0] = 0;
+    priTranVecs[2][1] = 0;
+    priTranVecs[2][2] = latticeConstant;
+
+    cellAtomNumber = 2;
+    cellAtomRs[0][0] = 0;
+    cellAtomRs[0][1] = 0;
+    cellAtomRs[0][2] = 0;
+    cellAtomRs[1][0] = 0.5 * latticeConstant;
+    cellAtomRs[1][1] = 0.5 * latticeConstant + 0.5 * latticeConstant * xy;
+    cellAtomRs[1][2] = 0.5 * latticeConstant;
+    cellAtomTypes[0] = 1;
+    cellAtomTypes[1] = 1;
+
+    boxStartPoint[0] = 0;
+    boxStartPoint[1] = 0;
+    boxStartPoint[2] = 0;
+
+    boxTranVecs[0][0] = latticeConstant * length;
+    boxTranVecs[0][1] = latticeConstant * length * xy;
+    boxTranVecs[0][2] = 0;
+    boxTranVecs[1][0] = 0;
+    boxTranVecs[1][1] = latticeConstant * length;
+    boxTranVecs[1][2] = 0;
+    boxTranVecs[2][0] = 0;
+    boxTranVecs[2][1] = 0;
+    boxTranVecs[2][2] = latticeConstant * length;
+    boxPerpendicular = 0;
+    ComputeRecTranVecs(boxTranVecs, boxRecTranVecs);
+    ConstructReducedLattice();
+    ConstructLattice();
+    ConstructCrystal();
+}
+
 /* main */
 int main()
 {
     /* parameters */
-    typeMasses[1] = 183.85;
-    InitMassUnit();
     double randomSeed;
     randomSeed = 1.0;
     srand(randomSeed);
 
-    /* processing */
-    ConstructStdCrystal_BCC(3.14, 20);
-    double temperature;
-    temperature = 300;
-    VelocityMaxWell(temperature);
+    typeMasses[1] = 183.84; // for W
+    InitMassUnit();
+    strcpy(potentialName, "EAM");
+    neighborCutoff = 6;
+    neighborInterval = 100;
+    strcpy(dynamicStyle, "VelocityVerlet");
 
-    /* Output */
-    int i;
-    double speed;
-    FILE *fp;
-    fp = fopen("velocity_maxwell.txt", "w");
-    fprintf(fp, "velocity_x speed\n");
-    for (i = 0; i < atomNumber; i++)
-    {     
-        speed = sqrt(atoms[i].velocity[0] * atoms[i].velocity[0] + atoms[i].velocity[1] * atoms[i].velocity[1] + atoms[i].velocity[2] * atoms[i].velocity[2]);
-        fprintf(fp, "%f %f\n", atoms[i].velocity[0], speed);
+    /* processing*/
+
+    double strain;
+    int n;
+    double stress[6];
+
+    printf("strain_xy energy\n");
+    for (strain = -0.001; strain < 0.00101; strain += 0.0001)
+    {
+        ConstructStdCrystal_BCC_Shear(3.14, 10, strain);
+        InitVelocity(0);
+        NeighborList(1);
+        Potential(1, 0);
+        printf("%f%% %f\n", strain * 100, totalPotentialEnergy);
     }
-    fclose(fp);
 
     return 0;
 }
+     

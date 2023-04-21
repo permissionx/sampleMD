@@ -11,7 +11,7 @@
 #define MAX_NEIGHBOR_NUMBER 2000 // maximum number of neighbors
 // L-J parameters for Ne
 #define LJ_EPSILON 0.0031
-#define LJ_SIGMA 2.628
+#define LJ_SIGMA 2.74
 #define LJ_2_EPSILON 0.0062                     // 4 * LJ_EPSILON
 #define LJ_24_EPSILON_SIGMA_6 31.48301472289983 // 24 * LJ_EPSILON * pow(LJ_SIGMA, 6)
 #define LJ_2_SIGMA_6 846.3176000779524          // 2 * pow(LJ_SIGMA, 6)
@@ -199,7 +199,7 @@ void InitMassUnit();
 void VelocityMaxwell(double temperature);
 void ZeroMomentum();
 void InitVelocity(double temperature);
-void Dynamics(double stopTime, double timeStep, double targetTemperature, double result[2]);
+void Dynamics(double stopTime, double timeStep);
 void IterRun();
 void ComputeAcceleration();
 void IterRun_Euler(double timeStep);
@@ -976,6 +976,7 @@ void Minimize()
     nStep = 0;
     printf("\n---Minimization start---\n");
     printf("iter pe dE\n");
+    NeighborList(1);
     Potential(1, 1);
     printf("%d %20.10f\n", nStep, totalPotentialEnergy);
     do
@@ -1573,7 +1574,7 @@ void Thermostat_Berendsen(double temperature, double targetTemperature, int freq
 void Thermostat_NoseHoover(double temperature, double targetTemperature, int frequency, double timeStep)
 {
     static int count = 0;
-    double Q = 0.05; // parameter
+    double Q = 0.1; // parameter
     double xi_velocity;
     int n, d;
     if (count == 0)
@@ -1593,6 +1594,46 @@ void Thermostat_NoseHoover(double temperature, double targetTemperature, int fre
             atoms[n].accelerationModify[d] = -xi_NoseHoover * atoms[n].velocity[d];
         }
     }
+}
+
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double temperature;
+    double targetTemperature = 300;
+    FILE *fp;
+    char fileName[50] = "debug/thermostat/time-temperature.nh.csv";
+    char dumpName[50] = "debug/thermostat/run.nh.dump";
+
+    InitDynamic();
+
+    time = 0;
+    nStep = 0;
+    fp = fopen(fileName, "w");
+    fprintf(fp, "step time temperature\n");
+    Dump_lammpstrj(dumpName, 1, nStep);
+    while (time <= stopTime)
+    {
+        if (nStep % 100 == 0)
+        {
+            temperature = ComputeTemperature();
+        }
+        if (nStep % 100 == 0)
+        {
+            fprintf(fp, "%d %f %f\n", nStep, time, temperature);
+            printf("%d %f %f\n", nStep, time, temperature);
+            Dump_lammpstrj(dumpName, 0, nStep);
+        }
+        if (nStep >= 4000)
+        {
+            Thermostat(temperature, targetTemperature, 100, timeStep, "Nose-Hoover");
+        }
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+    }
+    fclose(fp);
 }
 
 void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy)
@@ -1644,42 +1685,6 @@ void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy
     ConstructCrystal();
 }
 
-void Dynamics(double stopTime, double timeStep, double targetTemperature, double result[2])
-{
-    double time;
-    int n, d;
-    int count;
-    double temperature, pressure, ave_t, ave_p;
-    double stress[6];
-
-    InitDynamic();
-
-    time = 0;
-    nStep = 0;
-    count = 0;
-    ave_t = 0;
-    ave_p = 0;
-
-    while (time <= stopTime)
-    {
-        temperature = ComputeTemperature();
-        if (time >= 8.0 && nStep%100==0)
-        {
-            ComputeStress(stress);
-            pressure = -(stress[0] + stress[1] + stress[2])/3;
-            ave_t += temperature;
-            ave_p += pressure;
-            count += 1;
-        }
-        Thermostat(temperature, targetTemperature, 1, timeStep, "Nose-Hoover");
-        IterRun(timeStep);
-        nStep += 1;
-        time += timeStep;
-    }
-    result[0] = ave_t/count;
-    result[1] = ave_p/count;
-}
-
 /* main */
 int main()
 {
@@ -1687,39 +1692,29 @@ int main()
     double randomSeed;
     randomSeed = 1.0;
     srand(randomSeed);
-    typeMasses[1] = 20.1797;
+
+    typeMasses[1] = 183.84; // for W
     InitMassUnit();
-    strcpy(potentialName, "LJ");
-    potentialCutoff_LJ = 5;
+    strcpy(potentialName, "EAM");
     neighborCutoff = 6;
     neighborInterval = 100;
     strcpy(dynamicStyle, "VelocityVerlet");
 
     /* processing*/
-    FILE *fp;
-    char fileName[50];
-    double targetTemperature, temperature;
-    double scale, pressure, volume;
+
+    double strain;
+    int n;
     double stress[6];
-    double result[2]; // store average pressure and volume
-    strcpy(fileName, "output/isotherm.dat");
-    fp = fopen(fileName, "w");
-    fprintf(fp, "targetTemperature volume pressure temperature\n");
-    printf("targetTemperature volume pressure temperature\n");
-    for (targetTemperature = 100; targetTemperature < 901; targetTemperature += 200)
+
+    printf("strain_xy energy\n");
+    for (strain = -0.001; strain < 0.00101; strain += 0.0001)
     {
-        for (scale = 7; scale < 14; scale += 1)
-        {
-            ConstructStdCrystal_FCC(4.23 * pow(scale, 1. / 3.), 5);
-            InitVelocity(targetTemperature);
-            Dynamics(10, 0.0001, targetTemperature, result);
-            temperature = result[0];
-            pressure = result[1];
-            volume = ComputeBoxVolume();
-            printf("%f %f %f %f\n", targetTemperature, volume, pressure, temperature);
-            fprintf(fp, "%f %f %f %f\n", targetTemperature, volume, pressure, temperature);
-        }          
+        ConstructStdCrystal_BCC_Shear(3.14, 10, strain);
+        InitVelocity(0);
+        NeighborList(1);
+        Potential(1, 0);
+        printf("%f%% %f\n", strain * 100, totalPotentialEnergy);
     }
-    fclose(fp);
+
     return 0;
 }
