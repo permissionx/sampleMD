@@ -1688,6 +1688,8 @@ void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy
 /* main */
 int main()
 {
+    int n;
+
     /* parameters */
     double randomSeed;
     randomSeed = 1.0;
@@ -1703,13 +1705,20 @@ int main()
     /* processing*/
     double siaPosition[3] = {5.25*3.14,5.25*3.14,5.25*3.14};
     ConstructStdCrystal_BCC(3.14, 10);
-    NeighborList(1);
-    Potential(1,0);
-    printf("Perfect system energy: %f\n", totalPotentialEnergy);
-    double debug1 = totalPotentialEnergy;
     InsertAtom(siaPosition, 1);
     Minimize();
-    printf("System energy with a SIA: %f\n", totalPotentialEnergy);
+    for(n=0;n<atomNumber;n++)
+    {
+        if (atoms[n].id == 889)
+        {
+            DeleteAtomByIndex(n);
+            atomNumber -= 1;
+            break;
+        }
+    }
+    Dump_lammpstrj("output/7.6_static-recovery.lammpstrj",1,0);
+    Minimize();
+    Dump_lammpstrj("output/7.7_static-recovery.lammpstrj",0,1);
 
     return 0;
 }

@@ -1596,46 +1596,6 @@ void Thermostat_NoseHoover(double temperature, double targetTemperature, int fre
     }
 }
 
-void Dynamics(double stopTime, double timeStep)
-{
-    double time;
-    int n, d;
-    double temperature;
-    double targetTemperature = 300;
-    FILE *fp;
-    char fileName[50] = "debug/thermostat/time-temperature.nh.csv";
-    char dumpName[50] = "debug/thermostat/run.nh.dump";
-
-    InitDynamic();
-
-    time = 0;
-    nStep = 0;
-    fp = fopen(fileName, "w");
-    fprintf(fp, "step time temperature\n");
-    Dump_lammpstrj(dumpName, 1, nStep);
-    while (time <= stopTime)
-    {
-        if (nStep % 100 == 0)
-        {
-            temperature = ComputeTemperature();
-        }
-        if (nStep % 100 == 0)
-        {
-            fprintf(fp, "%d %f %f\n", nStep, time, temperature);
-            printf("%d %f %f\n", nStep, time, temperature);
-            Dump_lammpstrj(dumpName, 0, nStep);
-        }
-        if (nStep >= 4000)
-        {
-            Thermostat(temperature, targetTemperature, 100, timeStep, "Nose-Hoover");
-        }
-        IterRun(timeStep);
-        nStep += 1;
-        time += timeStep;
-    }
-    fclose(fp);
-}
-
 void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy)
 {
     latticeSizes[0][0] = 0;
@@ -1685,9 +1645,37 @@ void ConstructStdCrystal_BCC_Shear(double latticeConstant, int length, double xy
     ConstructCrystal();
 }
 
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double temperature;
+    double targetTemperature = 1000;
+
+    InitDynamic();
+
+    time = 0;
+    nStep = 0;
+    while (time <= stopTime)
+    {
+        if (nStep % 100 == 0)
+        {
+            Dump_lammpstrj("output/7.7_dynamic-recovery.lammpstrj", 0, nStep);
+            printf("%d %f\n",nStep, temperature);
+        }
+        temperature = ComputeTemperature();
+        Thermostat(temperature, targetTemperature, 100, timeStep, "Nose-Hoover");
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+    }
+}
+
 /* main */
 int main()
 {
+    int n;
+
     /* parameters */
     double randomSeed;
     randomSeed = 1.0;
@@ -1697,20 +1685,32 @@ int main()
     InitMassUnit();
     strcpy(potentialName, "EAM");
     strcpy(minimizeStyle, "CG");
+    strcpy(dynamicStyle, "VelocityVerlet");
     neighborCutoff = 6;
     neighborInterval = 100;
 
     /* processing*/
-    double siaPosition[3] = {5.25*3.14,5.25*3.14,5.25*3.14};
+    double siaPosition[3] = {5.25 * 3.14, 5.25 * 3.14, 5.25 * 3.14};
     ConstructStdCrystal_BCC(3.14, 10);
-    NeighborList(1);
-    Potential(1,0);
-    printf("Perfect system energy: %f\n", totalPotentialEnergy);
-    double debug1 = totalPotentialEnergy;
     InsertAtom(siaPosition, 1);
     Minimize();
-    printf("System energy with a SIA: %f\n", totalPotentialEnergy);
-    Dump_lammpstrj("output/7.5_sia.dump",1,0);
+    for (n = 0; n < atomNumber; n++)
+    {
+        if (atoms[n].id == 893)
+        {
+            DeleteAtomByIndex(n);
+            atomNumber -= 1;
+            break;
+        }
+    }
+    Dump_lammpstrj("output/7.7_static-recovery.lammpstrj", 1, 0);
+    Minimize();
+    Dump_lammpstrj("output/7.7_static-recovery.lammpstrj", 0, 1);
+
+    InitVelocity(2000);
+    Dynamics(1, 0.0001);
+    Minimize();
+    Dump_lammpstrj("output/7.7_dynamic-recovery.lammpstrj", 0, nStep);
+
     return 0;
 }
-

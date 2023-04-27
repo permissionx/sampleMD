@@ -174,7 +174,7 @@ void MatInv(double matIn[3][3], double matOut[3][3]);    //Matrix Inversion
 void ComputeReR(double r[3], double recTranVecs_inv[3][3], double startPoint[3], double reR[3]);
 
 void ComputeBoxRecTranVecs();
-void ComputeAtomBoxReR();
+void ComputeAtomBoxReR(int n);
 void PBC_r();
 void PBC_dr(int i, int j, double dr[3]);
 void PBC_r_nonorthogonal();
