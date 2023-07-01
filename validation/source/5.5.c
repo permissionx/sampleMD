@@ -119,6 +119,7 @@ struct Atom
     double lastForce_CG[3];
     double startR_lineMin[3];
     double velocity[3];
+    double acceleration[3];
 };
 
 
