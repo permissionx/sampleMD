@@ -6,8 +6,8 @@
 
 /* constants */
 // chapter 1
-#define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 100000  //maximum number of atoms
+#define MAX_LATTICE_NUMBER 20000 //maximum number of lattices
+#define MAX_ATOM_NUMBER 200000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
 // chapter 2
@@ -136,14 +136,13 @@ int boxPerpendicular;
 double neighborCutoff;
 double potentialCutoff_LJ;
 double totalPotentialEnergy;
-
+char potentialName[20];
 int nStep;
 int neighborInterval;
 
 // chapter 4
 double energyTolerance_Minimize;
-double minimizeStyle[20];
-
+char minimizeStyle[20];
 
 
 
@@ -186,15 +185,14 @@ void EdgeDislocation_100(double latticeConstant);
 void ConstructNeighborList();
 void Potential_LJ(int isEnergy, int isForce);
 void Potential_EAM(int isEnergy, int isForce);
+void Potential(int isEnergy, int isForce);
 
-void NeighborList();
+void NeighborList(int isForceConstruct);
 void UpdateNeighborList();
 
 // chapter 4
 void Minimize();
 void MinDirection();
-
-
 
 /* functions */
 void ConstructReducedLattice()
@@ -863,9 +861,27 @@ void Potential_EAM(int isEnergy, int isForce)
     }
 }
 
-void NeighborList()
+void Potential(int isEnergy, int isForce)
 {
-    if (nStep % neighborInterval == 0)
+    if (strcmp(potentialName, "LJ") == 0)
+
+    {
+        Potential_LJ(isEnergy, isForce);
+    }
+    else if (strcmp(potentialName, "EAM") == 0)
+    {
+        Potential_EAM(isEnergy, isForce);
+    }
+    else
+    {
+        printf("Error: Potential %s not found.\n", potentialName);
+        exit(1);
+    }
+}
+
+void NeighborList(int isForceConstruct)
+{
+    if (isForceConstruct || nStep % neighborInterval == 0)
     {
         ConstructNeighborList();
     }
@@ -927,10 +943,8 @@ void MinDirection()
 }
 
 
-
 /* main */
 int main()
 {
     return 0;
 }
-

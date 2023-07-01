@@ -6,8 +6,8 @@
 
 /* constants */
 // chapter 1
-#define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 100000  //maximum number of atoms
+#define MAX_LATTICE_NUMBER 20000 //maximum number of lattices
+#define MAX_ATOM_NUMBER 200000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
 // chapter 2
@@ -136,9 +136,7 @@ int boxPerpendicular;
 double neighborCutoff;
 double potentialCutoff_LJ;
 double totalPotentialEnergy;
-
-int nStep;
-int neighborInterval;
+char potentialName[20];
 
 
 
@@ -181,10 +179,7 @@ void EdgeDislocation_100(double latticeConstant);
 void ConstructNeighborList();
 void Potential_LJ(int isEnergy, int isForce);
 void Potential_EAM(int isEnergy, int isForce);
-
-void NeighborList();
-void UpdateNeighborList();
-
+void Potential(int isEnergy, int isForce);
 
 /* functions */
 void ConstructReducedLattice()
@@ -853,60 +848,40 @@ void Potential_EAM(int isEnergy, int isForce)
     }
 }
 
-void NeighborList()
+void Potential(int isEnergy, int isForce)
 {
-    if (nStep % neighborInterval == 0)
+    if (strcmp(potentialName, "LJ") == 0)
+
     {
-        ConstructNeighborList();
+        Potential_LJ(isEnergy, isForce);
+    }
+    else if (strcmp(potentialName, "EAM") == 0)
+    {
+        Potential_EAM(isEnergy, isForce);
     }
     else
     {
-        UpdateNeighborList();
+        printf("Error: Potential %s not found.\n", potentialName);
+        exit(1);
     }
 }
-
-void UpdateNeighborList()
-{
-    int i, j, d;
-    int jAtomIndex;
-    double dr[3];
-    for (i = 0; i < atomNumber; i++)
-    {
-        for (j = 0; j < atoms[i].neighborNumber; j++)
-        {
-            jAtomIndex = atoms[i].neighbors[j].index;
-            PBC_dr(i, jAtomIndex, dr);
-            atoms[i].neighbors[j].distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]);
-            for (d = 0; d < 3; d++)
-            {
-                atoms[i].neighbors[j].dr[d] = dr[d];
-            }
-        }
-    }
-}
-
 
 /* main */
 int main()
 {
     /* parameters */
-    neighborInterval = 10000;
-    neighborCutoff = 4.1 * 3.7;
-    /* processing and output*/
-    double latticeConstant;
+    neighborCutoff = 6.0;
+    strcpy(potentialName, "EAM");
 
-    printf("lattice_constant(A) pe(eV/atom)\n");
-    nStep = 0;
-    for (latticeConstant = 3.7; latticeConstant < 5.0; latticeConstant += 0.01)
-    {
-        ConstructStdCrystal_FCC(latticeConstant, 10);
-        potentialCutoff_LJ = 4.1 * latticeConstant;
-        NeighborList();
-        Potential_LJ(1, 0);
-        printf("%f %f\n", latticeConstant, totalPotentialEnergy / atomNumber);
-        nStep += 1;
-    }
+    /* processing*/
+    ConstructStdCrystal_BCC(3.14, 10);
+    double deleteBlock[3][2] = {{-0.1, 10.1 * 3.14}, {-0.1, 10.1 * 3.14}, {5.1 * 3.14, 10.1 * 3.14}};
+    DeleteAtomsByBlockRegion(deleteBlock);
+    ConstructNeighborList();
+    Potential(1, 1);
+
+    /* output */
+    Dump_lammpstrj("output/3.7_surface-W-BCC.lammpstrj", 1, 1);
 
     return 0;
 }
-

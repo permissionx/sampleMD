@@ -106,7 +106,11 @@ struct Atom
     double potentialEnergy;
     double rho_EAM;
     double af_EAM;
+    double minDirection[3];
+    double lastForce_CG[3];
+    double startR_lineMin[3];
 };
+
 
 
 
@@ -137,6 +141,13 @@ double neighborCutoff;
 double potentialCutoff_LJ;
 double totalPotentialEnergy;
 char potentialName[20];
+int nStep;
+int neighborInterval;
+
+// chapter 4
+double energyTolerance_Minimize;
+char minimizeStyle[20];
+double delta_lineMinimize;
 
 
 
@@ -180,6 +191,16 @@ void ConstructNeighborList();
 void Potential_LJ(int isEnergy, int isForce);
 void Potential_EAM(int isEnergy, int isForce);
 void Potential(int isEnergy, int isForce);
+
+void NeighborList(int isForceConstruct);
+void UpdateNeighborList();
+
+// chapter 4
+void Minimize();
+void MinDirection();
+void MinDirection_SD();
+void MinDirection_CG();
+void LineMinimize();
 
 /* functions */
 void ConstructReducedLattice()
@@ -866,24 +887,173 @@ void Potential(int isEnergy, int isForce)
     }
 }
 
+void NeighborList(int isForceConstruct)
+{
+    if (isForceConstruct || nStep % neighborInterval == 0)
+    {
+        ConstructNeighborList();
+    }
+    else
+    {
+        UpdateNeighborList();
+    }
+}
+
+void UpdateNeighborList()
+{
+    int i, j, d;
+    int jAtomIndex;
+    double dr[3];
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (j = 0; j < atoms[i].neighborNumber; j++)
+        {
+            jAtomIndex = atoms[i].neighbors[j].index;
+            PBC_dr(i, jAtomIndex, dr);
+            atoms[i].neighbors[j].distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]);
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].neighbors[j].dr[d] = dr[d];
+            }
+        }
+    }
+}
+
+void Minimize()
+{
+    double potentialEnergy_last;
+    nStep = 0;
+    printf("\n---Minimization start---\n");
+    printf("iter pe dE\n");
+    NeighborList(1);
+    Potential(1, 1);
+    printf("%d %20.10f\n", nStep, totalPotentialEnergy);
+    do
+    {
+        potentialEnergy_last = totalPotentialEnergy;
+        MinDirection();
+        LineMinimize();
+        Potential(0, 1);
+        nStep += 1;
+        printf("%d %30.20f  %30.20f\n", nStep, totalPotentialEnergy, totalPotentialEnergy - potentialEnergy_last);
+    } while (fabs(potentialEnergy_last - totalPotentialEnergy) > energyTolerance_Minimize);
+    printf("---Minimization end---\n");
+}
+
+void MinDirection()
+{
+    if (strcmp(minimizeStyle, "SD") == 0)
+        MinDirection_SD();
+    else if (strcmp(minimizeStyle, "CG") == 0)
+        MinDirection_CG();
+    else
+        printf("\nMinimize style not found. Program terminated.\n"), exit(-1);
+}
+
+void MinDirection_SD()
+{
+    int i, d;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            atoms[i].minDirection[d] = atoms[i].force[d];
+        }
+    }
+}
+
+void MinDirection_CG()
+{
+    int i, d;
+    double beta_up, beta_down, beta;
+    double directionCheck;
+    if (nStep == 0)
+    {
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].minDirection[d] = atoms[i].force[d];
+                atoms[i].lastForce_CG[d] = atoms[i].force[d];
+            }
+        }
+    }
+    else
+    {
+        beta_up = 0;
+        beta_down = 0;
+        for (i = 0; i < atomNumber; i++)
+        {
+            beta_up += VecDotMul(atoms[i].force, atoms[i].force);
+            beta_down += VecDotMul(atoms[i].lastForce_CG, atoms[i].lastForce_CG);
+        }
+        beta = beta_up / beta_down;
+        directionCheck = 0;
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].minDirection[d] = atoms[i].force[d] + beta * atoms[i].minDirection[d];
+                atoms[i].lastForce_CG[d] = atoms[i].force[d];
+                directionCheck += atoms[i].minDirection[d] * atoms[i].force[d];
+            }
+        }
+        if (directionCheck < 0)
+        {
+            for (i = 0; i < atomNumber; i++)
+            {
+                for (d = 0; d < 3; d++)
+                {
+                    atoms[i].minDirection[d] = atoms[i].force[d];
+                }
+            }
+        }
+    }
+}
+
+void LineMinimize()
+{
+    double startPotentialEnergy;
+    double k;
+    double slop;
+    double lambda_t;
+    int i, d;
+
+    k = 0.5;
+    slop = 0;
+    lambda_t = 100;
+
+    startPotentialEnergy = totalPotentialEnergy;
+    for (i = 0; i < atomNumber; i++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            slop += atoms[i].minDirection[d] * atoms[i].minDirection[d];
+            atoms[i].startR_lineMin[d] = atoms[i].r[d];
+        }
+    }
+    slop = sqrt(slop);
+
+    lambda_t /= k;
+    do
+    {
+        lambda_t *= k;
+        for (i = 0; i < atomNumber; i++)
+        {
+            for (d = 0; d < 3; d++)
+            {
+                atoms[i].r[d] = atoms[i].startR_lineMin[d] + lambda_t * atoms[i].minDirection[d];
+            }
+        }
+        PBC_r();
+        NeighborList(1);
+        Potential(1, 0);
+    } while (totalPotentialEnergy > startPotentialEnergy - 0.5 * slop * lambda_t);
+}
+
+
 /* main */
 int main()
 {
-    /* parameters */
-    neighborCutoff = 6.0;
-    strcpy(potentialName, "EAM");
-    
-    /* processing and output*/
-    double latticeConstant;
-    printf("lattice_constant pe(eV/atom)\n");
-    for (latticeConstant = 2.9; latticeConstant < 3.4; latticeConstant += 0.01)
-    {
-        ConstructStdCrystal_BCC(latticeConstant, 7);
-        ConstructNeighborList();
-        Potential(1, 0);
-        printf("%f %f\n", latticeConstant, totalPotentialEnergy / atomNumber);
-    }
-
     return 0;
 }
-

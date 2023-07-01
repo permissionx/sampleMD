@@ -6,8 +6,8 @@
 
 /* constants */
 // chapter 1
-#define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 100000  //maximum number of atoms
+#define MAX_LATTICE_NUMBER 20000 //maximum number of lattices
+#define MAX_ATOM_NUMBER 200000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
 // chapter 2
@@ -849,20 +849,6 @@ void Potential_EAM(int isEnergy, int isForce)
 /* main */
 int main()
 {
-    /* parameters */
-    neighborCutoff = 6.0;
-    
-    /* processing and output*/
-    double latticeConstant;
-    printf("lattice_constant pe(eV/atom)\n");
-    for (latticeConstant = 2.9; latticeConstant < 3.4; latticeConstant += 0.01)
-    {
-        ConstructStdCrystal_BCC(latticeConstant, 7);
-        ConstructNeighborList();
-        Potential_EAM(1, 0);
-        printf("%f %f\n", latticeConstant, totalPotentialEnergy / atomNumber);
-    }
-
     return 0;
 }
 
