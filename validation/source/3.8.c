@@ -668,6 +668,7 @@ void ConstructNeighborList()
     double distance;
     double dr[3];
     int neighborIndex_i, neighborIndex_j;
+    int tmpNeighborNumber;
 
     for (i = 0; i < atomNumber; i++)
     {
@@ -692,8 +693,18 @@ void ConstructNeighborList()
                     atoms[i].neighbors[neighborIndex_i].dr[d] = dr[d];
                     atoms[j].neighbors[neighborIndex_j].dr[d] = -dr[d];
                 }
-                atoms[i].neighborNumber++;
-                atoms[j].neighborNumber++;
+                tmpNeighborNumber = atoms[i].neighborNumber++;
+                if (tmpNeighborNumber > MAX_NEIGHBOR_NUMBER)
+                {
+                    printf("Error: too many neighbors.\n");
+                    exit(1);
+                }
+                tmpNeighborNumber = atoms[j].neighborNumber++;
+                if (tmpNeighborNumber > MAX_NEIGHBOR_NUMBER)
+                {
+                    printf("Error: too many neighbors.\n");
+                    exit(1);
+                }
             }
         }
     }
