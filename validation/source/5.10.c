@@ -230,6 +230,8 @@ void ComputeAcceleration();
 void IterRun_Euler(double timeStep);
 void IterRun_Verlet(double timeStep);
 void IterRun_VelocityVerlet(double timeStep);
+double ComputeTotalKineticEnergy();
+double ComputeTemperature();
 
 /* functions */
 void ConstructReducedLattice()
@@ -885,6 +887,7 @@ void Potential_EAM(int isEnergy, int isForce)
                 energyPhi *= 0.5;
                 atoms[i].potentialEnergy += energyPhi;
                 totalPotentialEnergy += energyPhi;
+                
             }
             if (isForce)
             {
@@ -1178,25 +1181,6 @@ void InitVelocity(double temperature)
     ZeroMomentum();
 }
 
-void Dynamics(double stopTime, double timeStep)
-{
-    double time;
-    int n, d;
-
-    time = 0;
-    nStep = 0;
-    while (time <= stopTime)
-    {
-        IterRun(timeStep);
-        nStep += 1;
-        time += timeStep;
-        if (nStep % 100 == 0)
-        {
-            printf("%d %f\n", nStep, time);
-        }
-    }
-}
-
 void IterRun(double timeStep)
 {
     if (strcmp(dynamicStyle, "Euler") == 0)
@@ -1209,7 +1193,7 @@ void IterRun(double timeStep)
 
 void ComputeAcceleration()
 {
-    int n,d;
+    int n, d;
     NeighborList(0);
     Potential(0, 1);
     for (n = 0; n < atomNumber; n++)
@@ -1303,9 +1287,82 @@ void IterRun_VelocityVerlet(double timeStep)
     }
 }
 
+double ComputeTotalKineticEnergy()
+{
+    int n, d;
+    double e = 0;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            e += 0.5 * typeMasses[atoms[n].type] * atoms[n].velocity[d] * atoms[n].velocity[d];
+        }
+    }
+    return e;
+}
+
+double ComputeTemperature()
+{
+    double Ek, T;
+    Ek = ComputeTotalKineticEnergy();
+    T = 2. / 3. /K_B /atomNumber * Ek;
+    return T;
+}
+
+
+void Dynamics(double stopTime, double timeStep)
+{
+    double time;
+    int n, d;
+    double totalEnergy;
+    char dumpName[30];
+
+    strcpy(dumpName, "output/5.9.b_bcc-run.lammpstrj");
+    Dump_lammpstrj(dumpName, 1, 0);
+    printf("step time totalEnergy\n");
+    NeighborList(0);
+    Potential(1, 0);
+    totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+    printf("%d %f %f\n",0, 0.0, totalEnergy);
+
+    time = 0;
+    nStep = 0;
+    while (time <= stopTime)
+    {
+        IterRun(timeStep);
+        nStep += 1;
+        time += timeStep;
+        if (nStep % 100 == 0)
+        {
+            Dump_lammpstrj(dumpName, 0, nStep);
+            NeighborList(0);
+            Potential(1, 0);
+            totalEnergy = totalPotentialEnergy + ComputeTotalKineticEnergy();
+            printf("%d %f %f\n",nStep, time, totalEnergy);
+        }
+    }
+}
+
 /* main */
 int main()
 {
+    /* parameters */
+    unsigned int randomSeed;
+    randomSeed = 1;
+    srand(randomSeed);
+
+    typeMasses[1] = 183.85;
+    InitMassUnit();
+    strcpy(potentialName, "EAM");
+    neighborCutoff = 6;
+    neighborInterval = 100;
+    strcpy(dynamicStyle, "VelocityVerlet");
+
+    /* processing*/
+    ConstructStdCrystal_BCC(3.14, 10);
+    InitVelocity(300);
+    Dynamics(1, 0.001);
+  
     return 0;
 }
 

@@ -7,10 +7,10 @@ struct Atom
 };
 
 /* function declarations */
-void IterRun_VelocityVerlet(double timestep);
+void IterRun_VelocityVerlet(double timeStep);
 
 /* functions */
-void IterRun_VelocityVerlet(double timestep)
+void IterRun_VelocityVerlet(double timeStep)
 {
     int n, d;
     if (nStep == 0)
@@ -28,7 +28,7 @@ void IterRun_VelocityVerlet(double timestep)
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[n].r[d] += atoms[n].velocity[d] * timestep + 0.5 * atoms[n].acceleration[d] * timestep * timestep;
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
         }
     }
     PBC_r();
@@ -41,6 +41,5 @@ void IterRun_VelocityVerlet(double timestep)
             atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
         }
     }
-    
 }
 

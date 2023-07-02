@@ -229,7 +229,7 @@ void Dynamics(double stopTime, double timeStep);
 void ComputeAcceleration();
 void IterRun_Euler(double timeStep);
 void IterRun_Verlet(double timeStep);
-void IterRun_VelocityVerlet(double timestep);
+void IterRun_VelocityVerlet(double timeStep);
 double ComputeTotalKineticEnergy();
 
 /* functions */
@@ -1252,7 +1252,7 @@ void IterRun_Verlet(double timeStep)
     PBC_r();
 }
 
-void IterRun_VelocityVerlet(double timestep)
+void IterRun_VelocityVerlet(double timeStep)
 {
     int n, d;
     if (nStep == 0)
@@ -1270,7 +1270,7 @@ void IterRun_VelocityVerlet(double timestep)
     {
         for (d = 0; d < 3; d++)
         {
-            atoms[n].r[d] += atoms[n].velocity[d] * timestep + 0.5 * atoms[n].acceleration[d] * timestep * timestep;
+            atoms[n].r[d] += atoms[n].velocity[d] * timeStep + 0.5 * atoms[n].acceleration[d] * timeStep * timeStep;
         }
     }
     PBC_r();
@@ -1283,7 +1283,6 @@ void IterRun_VelocityVerlet(double timestep)
             atoms[n].lastA_vverlet[d] = atoms[n].acceleration[d];
         }
     }
-    
 }
 
 double ComputeTotalKineticEnergy()
@@ -1300,7 +1299,7 @@ double ComputeTotalKineticEnergy()
     return e;
 }
 
-void Dynamics(double stopTime, double timestep)
+void Dynamics(double stopTime, double timeStep)
 {
     double time;
     int n, d;
@@ -1319,9 +1318,9 @@ void Dynamics(double stopTime, double timestep)
     nStep = 0;
     while (time <= stopTime)
     {
-        IterRun(timestep);
+        IterRun(timeStep);
         nStep += 1;
-        time += timestep;
+        time += timeStep;
         if (nStep % 100 == 0)
         {
             Dump_lammpstrj(dumpName, 0, nStep);
@@ -1337,8 +1336,8 @@ void Dynamics(double stopTime, double timestep)
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 183.85;

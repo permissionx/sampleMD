@@ -1165,8 +1165,8 @@ int main()
     /* parameters */
     typeMasses[1] = 183.85;
     InitMassUnit();
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     /* processing & output*/

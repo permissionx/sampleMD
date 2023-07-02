@@ -16,7 +16,7 @@ double ComputeTotalKineticEnergy()
     return e;
 }
 
-void Dynamics(double stopTime, double timestep)
+void Dynamics(double stopTime, double timeStep)
 {
     double time;
     int n, d;
@@ -35,9 +35,9 @@ void Dynamics(double stopTime, double timestep)
     nStep = 0;
     while (time <= stopTime)
     {
-        IterRun(timestep);
+        IterRun(timeStep);
         nStep += 1;
-        time += timestep;
+        time += timeStep;
         if (nStep % 100 == 0)
         {
             Dump_lammpstrj(dumpName, 0, nStep);
@@ -53,8 +53,8 @@ void Dynamics(double stopTime, double timestep)
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 183.85;
