@@ -428,7 +428,6 @@ void PBC_dr(int i, int j, double dr[3])
     }
     else
     {
-        ComputeAtomBoxReR();
         PBC_dr_general(i, j, dr);
     }
 }
