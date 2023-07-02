@@ -1081,12 +1081,12 @@ double GaussianRandom(double mu, double sigma)
     double z;
     do
     {
-        u1 = (double)rand() / RAND_MAX;
-        u2 = (double)rand() / RAND_MAX;
-        r = u1 * u1 + u2 * u2;  
-    } while (r > 1 || r == 0 || u1 == 1 || u2 == 1);
-    z = sqrt(-2.0 * log(u1)) * cos(2.0 * PI * u2);
-    return z * sigma + mu;
+        u1 = -1 + ((double)rand() / RAND_MAX) * 2;
+        u2 = -1 + ((double)rand() / RAND_MAX) * 2;
+        r = u1 * u1 + u2 * u2;
+    } while (r >= 1 || r == 0);
+    z = sqrt(-2.0 * log(r) / r) * u1 * sigma + mu;
+    return z;
 }
 
 void InitMassUnit()
