@@ -1036,12 +1036,13 @@ void MinDirection_CG()
 void LineMinimize()
 {
     double startPotentialEnergy;
-    double k;
+    double k, c;
     double slop;
     double lambda_t;
     int i, d;
 
     k = 0.5;
+    c = 0.5;
     slop = 0;
     lambda_t = 100;
 
@@ -1070,7 +1071,7 @@ void LineMinimize()
         PBC_r();
         NeighborList(1);
         Potential(1, 0);
-    } while (totalPotentialEnergy > startPotentialEnergy - 0.5 * slop * lambda_t);
+    } while (totalPotentialEnergy > startPotentialEnergy - c * slop * lambda_t);
 }
 
 
