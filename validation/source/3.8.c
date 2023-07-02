@@ -205,6 +205,11 @@ void ConstructReducedLattice()
         }
     }
     latticePointNumber = n;
+    if (latticePointNumber > MAX_LATTICE_NUMBER)
+    {
+        printf("Error: lattice point number exceeds the maximum number.\n");
+        exit(1);
+    }
 }
 
 void ConstructLattice()
