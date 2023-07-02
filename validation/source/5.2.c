@@ -276,6 +276,11 @@ void ConstructCrystal()
         }
     }
     atomNumber = nAtom;
+    if (atomNumber > MAX_ATOM_NUMBER)
+    {
+        printf("Error: atom number exceeds the maximum number of atoms.\n");
+        exit(1);
+    }
 }
 
 void Dump_xyz(char fileName[20])
