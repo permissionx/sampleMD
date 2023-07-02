@@ -120,4 +120,5 @@ int main() //
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
+    PBC_r();
 }

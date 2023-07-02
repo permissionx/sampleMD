@@ -519,6 +519,7 @@ void ConstructStdCrystal_BCC(double latticeConstant, int length)
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
+    PBC_r();
 }
 
 void ConstructStdCrystal_FCC(double latticeConstant, int length)
@@ -576,6 +577,7 @@ void ConstructStdCrystal_FCC(double latticeConstant, int length)
     ConstructReducedLattice();
     ConstructLattice();
     ConstructCrystal();
+    PBC_r();
 }
 
 void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
