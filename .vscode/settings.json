@@ -3,6 +3,8 @@
         "*.in": "lammps",
         "in": "lmps",
         "stdlib.h": "c",
-        "iterator": "c"
+        "iterator": "c",
+        "math.h": "c",
+        "string.h": "c"
     }
 }

@@ -170,7 +170,7 @@ void PBC_r_vertical();
 void PBC_dr_vertical(int i, int j, double dr[3]);
 void ConstructStdCrystal_BCC(double latticeConstant, int length);
 void ConstructStdCrystal_FCC(double latticeConstant, int length);
-void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep);
+void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep);
 
 void DeleteAtomByIndex(int index);
 void DeleteAtomsByShpereRegion(double center[3], double radius);
@@ -573,7 +573,7 @@ void ConstructStdCrystal_FCC(double latticeConstant, int length)
     ConstructCrystal();
 }
 
-void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
+void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
 {
     int n;
     FILE *fp;
@@ -591,7 +591,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int nstep)
         fp = fopen(fileName, "a");
     }
     fprintf(fp, "ITEM: TIMESTEP\n");
-    fprintf(fp, "%d\n", nstep);
+    fprintf(fp, "%d\n", dumpStep);
     fprintf(fp, "ITEM: NUMBER OF ATOMS\n");
     fprintf(fp, "%d\n", atomNumber);
     fprintf(fp, "ITEM: BOX BOUNDS pp pp pp\n");

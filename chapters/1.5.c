@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 /* constants */
-#define MAX_LATTICE_NUMBER 2000 //maximum number of lattices
+#define MAX_LATTICE_NUMBER 20000 //maximum number of lattices
 #define MAX_ATOM_NUMBER 20000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
