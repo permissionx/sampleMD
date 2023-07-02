@@ -46,7 +46,7 @@ double recPriTranVecs[3][3];
 double boxStartPoint[3];
 double boxTranVecs[3][3]; // box translation vectors
 double boxRecTranVecs[3][3]; //box reciprocal translation vectors
-int boxPerpendicular; 
+int boxOrthogonal; 
 
 
 /* function declarations */
@@ -299,7 +299,7 @@ void PBC_dr_orthogonal(int i, int j, double dr[3])
 
 void PBC_r()
 {
-    if (boxPerpendicular == 1)
+    if (boxOrthogonal == 1)
     {
         PBC_r_orthogonal();
     }
@@ -312,7 +312,7 @@ void PBC_r()
 
 void PBC_dr(int i, int j, double dr[3])
 {
-    if (boxPerpendicular == 1)
+    if (boxOrthogonal == 1)
     {
         PBC_dr_orthogonal(i, j, dr);
     }
@@ -368,7 +368,7 @@ int main()
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * 4;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     /* processing */
     ConstructReducedLattice();

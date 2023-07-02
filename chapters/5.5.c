@@ -125,7 +125,7 @@ double recPriTranVecs[3][3];
 double boxStartPoint[3];
 double boxTranVecs[3][3];    // box translation vectors
 double boxRecTranVecs[3][3]; // box reciprocal translation vectors
-int boxPerpendicular;
+int boxOrthogonal;
 
 double neighborCutoff;
 double potentialCutoff_LJ;
@@ -419,7 +419,7 @@ void PBC_dr_orthogonal(int i, int j, double dr[3])
 void PBC_r()
 {
     int n;
-    if (boxPerpendicular == 1)
+    if (boxOrthogonal == 1)
     {
         PBC_r_orthogonal();
     }
@@ -435,7 +435,7 @@ void PBC_r()
 
 void PBC_dr(int i, int j, double dr[3])
 {
-    if (boxPerpendicular == 1)
+    if (boxOrthogonal == 1)
     {
         PBC_dr_orthogonal(i, j, dr);
     }
@@ -489,7 +489,7 @@ void ConstructStdCrystal_BCC(double latticeConstant, int length)
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * length;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     ConstructReducedLattice();
     ConstructLattice();
@@ -546,7 +546,7 @@ void ConstructStdCrystal_FCC(double latticeConstant, int length)
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * length;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     ConstructReducedLattice();
     ConstructLattice();
@@ -557,7 +557,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
 {
     int n;
     FILE *fp;
-    if (boxPerpendicular != 1)
+    if (boxOrthogonal != 1)
     {
         printf("Error: Dump_lammpstrj() only works in cuboid.\n");
         exit(1);
@@ -647,7 +647,7 @@ void InsertAtom(double r[3], int type)
 void EdgeDislocation_100(double latticeConstant)
 {
     int n;
-    if (boxPerpendicular != 1)
+    if (boxOrthogonal != 1)
     {
         printf("Error: EdgeDislocation_100() only works in cuboid.\n");
         exit(1);

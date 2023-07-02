@@ -45,7 +45,7 @@ void ConstructStdCrystal_BCC(double latticeConstant, int length)
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * length;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     ConstructReducedLattice();
     ConstructLattice();
@@ -102,7 +102,7 @@ void ConstructStdCrystal_FCC(double latticeConstant, int length)
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * length;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     ConstructReducedLattice();
     ConstructLattice();

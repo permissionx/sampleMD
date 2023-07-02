@@ -5,7 +5,7 @@ void EdgeDislocation_100(double latticeConstant);
 void EdgeDislocation_100(double latticeConstant)
 {
     int n;
-    if (boxPerpendicular != 1)
+    if (boxOrthogonal != 1)
     {
         printf("Error: EdgeDislocation_100() only works in cuboid.\n");
         exit(1);
@@ -67,7 +67,7 @@ int main()
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = latticeConstant * 10;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     /* processing*/
     ConstructReducedLattice();

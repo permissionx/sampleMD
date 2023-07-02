@@ -44,7 +44,7 @@ void ComputeStress(double stress[6])
     double volume;
     double nonPBCForce[3][3], sumAtomForce[3][3];
     // only for orthogonal box with start point on (0,0,0)
-    if (boxPerpendicular != 1 )
+    if (boxOrthogonal != 1 )
     {
         printf("Error: computing stress in wrong box, check function ComputeStress()\n");
         exit(1);

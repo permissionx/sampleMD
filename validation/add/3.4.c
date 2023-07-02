@@ -3,7 +3,7 @@ void Dump_lammpstrj(char fileName[20], int isNewFile, int dumpStep)
 {
     int n;
     FILE *fp;
-    if (boxPerpendicular != 1)
+    if (boxOrthogonal != 1)
     {
         printf("Error: Dump_lammpstrj() only works in cuboid.\n");
         exit(1);

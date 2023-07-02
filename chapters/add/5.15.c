@@ -16,7 +16,7 @@ void ReviveVelocity();
 /* functions */
 void Barostat(double stress[3], double targetStress[3], int frequency, double timeStep, char algorithm[20])
 {
-    if (boxPerpendicular != 1 || !(boxStartPoint[0] == 0 && boxStartPoint[1] == 0 && boxStartPoint[2] == 0))
+    if (boxOrthogonal != 1 || !(boxStartPoint[0] == 0 && boxStartPoint[1] == 0 && boxStartPoint[2] == 0))
     {
         printf("Error: Barostat in wrong box, check function Barostat()\n");
         exit(1);

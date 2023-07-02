@@ -105,7 +105,7 @@ int main()
     boxTranVecs[2][0] = 0;
     boxTranVecs[2][1] = 0;
     boxTranVecs[2][2] = 1;
-    boxPerpendicular = 1;
+    boxOrthogonal = 1;
 
     /* processing and output*/
     double r;
