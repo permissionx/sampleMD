@@ -167,8 +167,8 @@ void PBC_r_general();
 void PBC_dr_general(int i, int j, double dr[3]);
 void PBC_r();
 void PBC_dr();
-void PBC_r_vertical();
-void PBC_dr_vertical(int i, int j, double dr[3]);
+void PBC_r_orthogonal();
+void PBC_dr_orthogonal(int i, int j, double dr[3]);
 
 void ConstructStdCrystal_BCC(double latticeConstant, int length);
 void ConstructStdCrystal_FCC(double latticeConstant, int length);
@@ -387,7 +387,7 @@ void PBC_dr_general(int i, int j, double dr[3])
     }
 }
 
-void PBC_r_vertical()
+void PBC_r_orthogonal()
 {
     int n, d;
     for (n = 0; n < atomNumber; n++)
@@ -406,7 +406,7 @@ void PBC_r_vertical()
     }
 }
 
-void PBC_dr_vertical(int i, int j, double dr[3])
+void PBC_dr_orthogonal(int i, int j, double dr[3])
 {
     int d;
     for (d = 0; d < 3; d++)
@@ -427,7 +427,7 @@ void PBC_r()
 {
     if (boxPerpendicular == 1)
     {
-        PBC_r_vertical();
+        PBC_r_orthogonal();
     }
     else
     {
@@ -440,7 +440,7 @@ void PBC_dr(int i, int j, double dr[3])
 {
     if (boxPerpendicular == 1)
     {
-        PBC_dr_vertical(i, j, dr);
+        PBC_dr_orthogonal(i, j, dr);
     }
     else
     {
