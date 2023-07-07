@@ -3,4 +3,4 @@ Sample codes for the book of 《原子尺度模拟入门：理论与程序》. T
 
 
 ## Where to find
-Compilable source of 代码 X.X in the book is stored in validation/source/X.X.C.
+Compilable source of 代码 X.X in the book is stored in validation/source/X.X.c.
