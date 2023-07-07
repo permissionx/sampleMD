@@ -55,8 +55,6 @@ dkms.conf
 *.xyz
 *.dump
 *.lammpstrj
-*.csv
-*.txt
 
 # Others 
-.vscode/
+.vscode
