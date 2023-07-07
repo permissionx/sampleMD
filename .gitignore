@@ -51,10 +51,12 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Dump files
+# Outpus
 *.xyz
 *.dump
 *.lammpstrj
+*.csv
+*.txt
 
 # Others 
 .vscode/
