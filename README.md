@@ -1,5 +1,5 @@
 # sampleMD
-Sample codes for the book of 《原子模拟入门：理论与实践》. The book is still in writing, please wait for my good news. 
+Sample codes for the book of 《原子尺度模拟入门：理论与程序》. The book is still in writing, please wait for my good news. 
 
 
 ## Where to find
