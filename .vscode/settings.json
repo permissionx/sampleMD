@@ -5,6 +5,7 @@
         "stdlib.h": "c",
         "iterator": "c",
         "math.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -1300,8 +1300,8 @@ void Dynamics(double stopTime, double timeStep)
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 183.85;

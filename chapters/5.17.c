@@ -1444,6 +1444,7 @@ void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency,
                 atoms[n].r[d] *= lambda;
             }
         }
+        PBC_r();
     }
     count += 1;
     if (count == frequency)
@@ -1593,8 +1594,8 @@ void Dynamics(double stopTime, double timeStep)
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 20.1797; // for Ne

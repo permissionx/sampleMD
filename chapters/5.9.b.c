@@ -1082,6 +1082,7 @@ void LineMinimize()
     } while (totalPotentialEnergy > startPotentialEnergy - c * slop * lambda_t);
 }
 
+
 double GaussianRandom(double mu, double sigma)
 {
     double u1, u2;
@@ -1260,6 +1261,20 @@ void IterRun_VelocityVerlet(double timeStep)
     }
 }
 
+double ComputeTotalKineticEnergy()
+{
+    int n, d;
+    double e = 0;
+    for (n = 0; n < atomNumber; n++)
+    {
+        for (d = 0; d < 3; d++)
+        {
+            e += 0.5 * typeMasses[atoms[n].type] * atoms[n].velocity[d] * atoms[n].velocity[d];
+        }
+    }
+    return e;
+}
+
 void Dynamics(double stopTime, double timeStep)
 {
     double time;
@@ -1293,26 +1308,12 @@ void Dynamics(double stopTime, double timeStep)
     }
 }
 
-double ComputeTotalKineticEnergy()
-{
-    int n, d;
-    double e = 0;
-    for (n = 0; n < atomNumber; n++)
-    {
-        for (d = 0; d < 3; d++)
-        {
-            e += 0.5 * typeMasses[atoms[n].type] * atoms[n].velocity[d] * atoms[n].velocity[d];
-        }
-    }
-    return e;
-}
-
 /* main */
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 183.85;
@@ -1329,3 +1330,4 @@ int main()
   
     return 0;
 }
+

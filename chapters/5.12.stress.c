@@ -1464,8 +1464,8 @@ void ComputeStress_(double stress[6])
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 20.1797; // for Ne

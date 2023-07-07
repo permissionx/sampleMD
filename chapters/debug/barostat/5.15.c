@@ -1421,7 +1421,7 @@ void Barostat(double stress[3], double targetStress[3], int frequency, double ti
 void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency, double timeStep)
 {
     static int count = 0;
-    double k_tau = 0.01; // parameter
+    double k_tau = 1; // parameter
     int n, d;
     double lambda;
     double deltaTime;
@@ -1437,6 +1437,7 @@ void Barostat_Berendsen(double stress[6], double targetStress[3], int frequency,
                 atoms[n].r[d] *= lambda;
             }
         }
+        PBC_r();
     }
     count += 1;
     if (count == frequency)
@@ -1544,8 +1545,8 @@ void InitDynamic()
 int main()
 {
     /* parameters */
-    double randomSeed;
-    randomSeed = 1.0;
+    unsigned int randomSeed;
+    randomSeed = 1;
     srand(randomSeed);
 
     typeMasses[1] = 183.84; // for W
