@@ -1551,7 +1551,7 @@ void ReviveVelocity()
 void Thermostat_Berendsen(double temperature, double targetTemperature, int frequency, double timeStep)
 {
     static int count = 0;
-    double lambda, deltaTime, deltaTime_tau; // deltaTime_tau: daltaTime/tau
+    double lambda, deltaTime_tau; // deltaTime_tau: daltaTime/tau
     int n, d;
     double tau = 0.01;
     if (count == 0)
