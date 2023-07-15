@@ -7,7 +7,7 @@
 /* constants */
 // chapter 1
 #define MAX_LATTICE_NUMBER 20000 //maximum number of lattices
-#define MAX_ATOM_NUMBER 200000  //maximum number of atoms
+#define MAX_ATOM_NUMBER 20000  //maximum number of atoms
 #define MAX_CELL_ATOM_NUMBER 10 //maximum number of atoms in a cell
 
 // chapter 2
