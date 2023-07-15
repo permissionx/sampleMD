@@ -1582,7 +1582,7 @@ void Thermostat_NoseHoover(double temperature, double targetTemperature, int fre
     int n, d;
     if (count == 0)
     {
-        xi_velocity = 3 * atomNumber * K_B / Q * (temperature - targetTemperature);
+        xi_velocity = 3.0 * (double)atomNumber * K_B / Q * (temperature - targetTemperature);
         xi_NoseHoover += xi_velocity * frequency * timeStep;
     }
     count += 1;
@@ -1662,12 +1662,12 @@ void Dynamics(double stopTime, double timeStep)
     nStep = 0;
     while (time <= stopTime)
     {
+        temperature = ComputeTemperature();
         if (nStep % 100 == 0)
         {
             Dump_lammpstrj("output/7.7_dynamic-recovery.lammpstrj", 0, nStep);
             printf("%d %f\n",nStep, temperature);
         }
-        temperature = ComputeTemperature();
         Thermostat(temperature, targetTemperature, 100, timeStep, "Nose-Hoover");
         IterRun(timeStep);
         nStep += 1;

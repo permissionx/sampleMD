@@ -31,7 +31,7 @@ void Thermostat_NoseHoover(double temperature, double targetTemperature, int fre
     int n, d;
     if (count == 0)
     {
-        xi_velocity = 3 * atomNumber * K_B / Q * (temperature - targetTemperature);
+        xi_velocity = 3.0 * (double)atomNumber * K_B / Q * (temperature - targetTemperature);
         xi_NoseHoover += xi_velocity * frequency * timeStep;
     }
     count += 1;
