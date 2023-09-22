@@ -606,7 +606,8 @@ void ConstructNeighborList()
         for (j = i + 1; j < atomNumber; j++)
         {
             PBC_dr(i, j, dr);
-            distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]);
+            distance = sqrt(dr[0] * dr[0] + dr[1] * dr[1] + dr[2] * dr[2]); 
+            // (before modification) distance = sqrt(pow(dr[0],2) + pow(dr[1],2) + pow(dr[2],2));
             if (distance < neighborCutoff)
             {
                 neighborIndex_i = atoms[i].neighborNumber;

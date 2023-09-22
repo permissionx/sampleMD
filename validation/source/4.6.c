@@ -1074,9 +1074,3 @@ void LineMinimize()
     } while (totalPotentialEnergy > startPotentialEnergy - c * slop * lambda_t);
 }
 
-
-/* main */
-int main()
-{
-    return 0;
-}

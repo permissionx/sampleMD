@@ -979,9 +979,3 @@ void MinDirection_SD()
     }
 }
 
-
-/* main */
-int main()
-{
-    return 0;
-}

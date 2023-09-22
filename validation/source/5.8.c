@@ -1296,10 +1296,11 @@ void Dynamics(double stopTime, double timeStep)
     fprintf(fp, "step time dx dv\n");
     dx = atoms[1].r[0] - atoms[0].r[0] - 3.076;
     dv = atoms[1].velocity[0] - atoms[0].velocity[0];
-    fprintf(fp, "%d %f %f %f\n", nStep, time, dx, dv);
 
     time = 0;
     nStep = 0;
+    fprintf(fp, "%d %f %f %f\n", nStep, time, dx, dv);
+
     while (time <= stopTime)
     {
         IterRun(timeStep);

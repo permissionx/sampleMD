@@ -1556,8 +1556,8 @@ void Dynamics(double stopTime, double timeStep)
     double stress[6];
     double targetStress[3] = {-0.5, -0.5, -0.5};
     FILE *fp;
-    char fileName[50] = "output/5.16_time-pressure.csv";
-    char dumpName[50] = "output/5.16_run.dump";
+    char fileName[50] = "output/5.16_time-pressure.b.csv";
+    char dumpName[50] = "output/5.16_run.b.dump";
 
     InitDynamic();
 

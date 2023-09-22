@@ -1090,7 +1090,7 @@ int main()
 
     /* processing & output*/
     ConstructStdCrystal_BCC(3.14, 10);
-    double r[3] = {1, 1, 1};
+    double r[3] = {5*3.14+1, 5*3.14+1, 5*3.14+1};
     InsertAtom(r, 1);
     NeighborList(1);
     Potential(0, 1);

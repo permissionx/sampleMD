@@ -1267,10 +1267,3 @@ void IterRun_Verlet(double timeStep)
     PBC_r();
 }
 
-
-/* main */
-int main()
-{
-    return 0;
-}
-

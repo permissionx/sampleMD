@@ -1628,8 +1628,8 @@ void Dynamics(double stopTime, double timeStep)
     double temperature;
     double targetTemperature = 300;
     FILE *fp;
-    char fileName[50] = "output/5.19_time-temperature.csv";
-    char dumpName[50] = "output/5.19_run.dump";
+    char fileName[50] = "output/5.19_time-temperature.b.csv";
+    char dumpName[50] = "output/5.19_run.b.dump";
 
     InitDynamic();
 

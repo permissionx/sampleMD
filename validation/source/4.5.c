@@ -1031,8 +1031,3 @@ void MinDirection_CG()
 }
 
 
-/* main */
-int main()
-{
-    return 0;
-}
