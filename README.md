@@ -1,5 +1,5 @@
 # sampleMD
-Sample codes for the book of 《原子尺度模拟入门：理论与程序》. The book's 1st offical version is coming soon🚀. 
+Sample codes for the book of 《原子尺度模拟入门：理论与程序》. The book's 1st offical version is online🚀. 
 
 
 ## Where to find
